@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Keyless by design: CI never needs an API key or any repository secret.
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_DB: arunika
+          POSTGRES_USER: postgres
+          # Throwaway password for a disposable CI container, not a real secret.
+          POSTGRES_PASSWORD: ci-only-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d arunika"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: arunika
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ci-only-password
+      REQUIRE_DB: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+      - name: Install dependencies
+        run: uv sync --locked
+      - name: Check (lint, format, workflow schema, tests)
+        run: uv run poe check
+      - name: Database ping
+        run: uv run poe db-ping
+      # Added in later phases: safety suite (2), gold-vs-gold eval sanity check (3),
+      # keyless end-to-end run (4).
+
+  # web:    lint, typecheck, test, build (Phase 6)
+  # docker: image build (Phase 8)

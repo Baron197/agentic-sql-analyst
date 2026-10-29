@@ -1,0 +1,67 @@
+[project]
+name = "sql-analyst"
+version = "0.1.0"
+description = "An agentic natural-language-to-SQL analyst over a fictional retailer's database: every answer shows its SQL, its rows, and numbers filled in by code."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+authors = [{ name = "Baron Purwa Hartono", email = "Baron197@users.noreply.github.com" }]
+dependencies = [
+    "pydantic-settings>=2.6",
+    "psycopg[binary]>=3.2",
+]
+
+[project.scripts]
+sql-analyst = "sql_analyst.cli:main"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.8",
+    "pytest>=8.3",
+    "poethepoet>=0.31",
+    "check-jsonschema>=0.30",
+]
+
+[build-system]
+requires = ["uv_build>=0.13,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = "backend/src"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["backend/src", "backend/tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+addopts = "-q --strict-markers"
+markers = ["db: needs the Postgres container (skipped locally if it is down; required in CI)"]
+
+[tool.poe.tasks]
+lint = "ruff check ."
+format = "ruff format ."
+format-check = "ruff format --check ."
+lint-ci = "check-jsonschema --builtin-schema vendor.github-workflows .github/workflows/ci.yml"
+test = "pytest"
+check = ["lint", "format-check", "lint-ci", "test"]
+
+db-up = "docker compose up -d --wait db"
+db-down = "docker compose down"
+db-ping = "python -m sql_analyst.db.ping"
+
+[tool.poe.tasks.db-reset]
+help = "Drop the database volume and start an empty, healthy database (Phase 1 adds schema + seed)"
+sequence = ["docker compose down -v", "docker compose up -d --wait db"]
+default_item_type = "cmd"
+
+[tool.poe.tasks.ask]
+help = "Ask the agent a question (Phase 4)"
+cmd = "sql-analyst ask"
+
+[tool.poe.tasks.eval]
+help = "Run the evaluation harness (Phase 3)"
+cmd = "sql-analyst eval"
