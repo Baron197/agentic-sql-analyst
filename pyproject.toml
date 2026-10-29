@@ -12,6 +12,7 @@ dependencies = [
     "pyyaml>=6.0",
     "sqlglot>=30.25",
     "psycopg-pool>=3.3",
+    "anthropic>=1.0",
 ]
 
 [project.scripts]
@@ -35,7 +36,7 @@ module-root = "backend/src"
 [tool.ruff]
 line-length = 100
 target-version = "py312"
-src = ["backend/src", "backend/tests"]
+src = ["backend/src", "backend/tests", "."]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
@@ -43,6 +44,7 @@ ignore = ["E501"]  # line length is the formatter's job; long string literals ar
 
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]
+pythonpath = ["."]
 addopts = "-q --strict-markers"
 markers = ["db: needs the Postgres container (skipped locally if it is down; required in CI)"]
 
@@ -76,5 +78,5 @@ help = "Ask the agent a question (Phase 4)"
 cmd = "sql-analyst ask"
 
 [tool.poe.tasks.eval]
-help = "Run the evaluation harness (Phase 3)"
-cmd = "sql-analyst eval"
+help = "Run the evaluation harness: --system gold|baseline --mode keyless|live --split dev|test (see eval/run_eval.py)"
+cmd = "python -m eval.run_eval"

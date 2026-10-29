@@ -1,0 +1,321 @@
+# Few-shot example library for the agent (Phase 4 retrieval). Written independently of
+# the eval set: a test fails if any question here is a near-duplicate of an eval question
+# or if any SQL here equals a gold SQL (eval/leakage.py). Never copy eval cases here.
+# Same conventions as the eval gold SQL: WIB dates, cancelled orders excluded from revenue,
+# net revenue = line net minus refunds (attributed to the order date).
+
+- id: e001
+  question: How many customers signed up during 2024?
+  lang: en
+  decision: answer
+  sql: |
+    SELECT count(*) AS customers FROM analytics.dim_customer
+    WHERE signup_date BETWEEN DATE '2024-01-01' AND DATE '2024-12-31'
+
+- id: e002
+  question: What was net revenue in March 2026?
+  lang: en
+  decision: answer
+  sql: |
+    WITH order_net AS (
+      SELECT o.order_id, sum(oi.quantity * oi.unit_price_idr - oi.discount_idr) AS line_net
+      FROM analytics.fact_orders o
+      JOIN analytics.fact_order_items oi ON oi.order_id = o.order_id
+      WHERE o.status <> 'cancelled'
+        AND (o.ordered_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN DATE '2026-03-01' AND DATE '2026-03-31'
+      GROUP BY o.order_id
+    ),
+    refunds AS (
+      SELECT order_id, sum(refund_amount_idr) AS refunded FROM analytics.fact_returns GROUP BY order_id
+    )
+    SELECT sum(n.line_net - coalesce(r.refunded, 0)) AS net_revenue_idr
+    FROM order_net n LEFT JOIN refunds r ON r.order_id = n.order_id
+
+- id: e003
+  question: Berapa jumlah pesanan yang dibatalkan sepanjang tahun 2024?
+  lang: id
+  decision: answer
+  sql: |
+    SELECT count(*) AS cancelled_orders FROM analytics.fact_orders
+    WHERE status = 'cancelled'
+      AND (ordered_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN DATE '2024-01-01' AND DATE '2024-12-31'
+
+- id: e004
+  question: Which 10 products had the highest gross sales in 2024?
+  lang: en
+  decision: answer
+  sql: |
+    SELECT p.product_name, sum(oi.quantity * oi.unit_price_idr) AS gross_sales_idr
+    FROM analytics.fact_orders o
+    JOIN analytics.fact_order_items oi ON oi.order_id = o.order_id
+    JOIN analytics.dim_product p ON p.product_id = oi.product_id
+    WHERE o.status <> 'cancelled'
+      AND (o.ordered_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN DATE '2024-01-01' AND DATE '2024-12-31'
+    GROUP BY p.product_name
+    ORDER BY gross_sales_idr DESC
+    LIMIT 10
+
+- id: e005
+  question: On average, how many lines does an order have?
+  lang: en
+  decision: answer
+  sql: |
+    SELECT round(count(*)::numeric / count(DISTINCT order_id), 2) AS lines_per_order
+    FROM analytics.fact_order_items
+
+- id: e006
+  question: Show net revenue per month for fiscal year FY2024.
+  lang: en
+  decision: answer
+  notes: FY2024 = April 2024 to March 2025
+  sql: |
+    WITH order_net AS (
+      SELECT o.order_id, (o.ordered_at AT TIME ZONE 'Asia/Jakarta')::date AS order_date,
+             sum(oi.quantity * oi.unit_price_idr - oi.discount_idr) AS line_net
+      FROM analytics.fact_orders o
+      JOIN analytics.fact_order_items oi ON oi.order_id = o.order_id
+      WHERE o.status <> 'cancelled'
+      GROUP BY o.order_id, o.ordered_at
+    ),
+    refunds AS (
+      SELECT order_id, sum(refund_amount_idr) AS refunded FROM analytics.fact_returns GROUP BY order_id
+    )
+    SELECT date_trunc('month', n.order_date)::date AS month,
+           sum(n.line_net - coalesce(r.refunded, 0)) AS net_revenue_idr
+    FROM order_net n
+    JOIN analytics.dim_date d ON d.date_key = n.order_date
+    LEFT JOIN refunds r ON r.order_id = n.order_id
+    WHERE d.fiscal_year = 2024
+    GROUP BY 1
+    ORDER BY 1
+
+- id: e007
+  question: How many marketplace orders were placed during Ramadan 2024?
+  lang: en
+  decision: answer
+  sql: |
+    SELECT count(*) AS orders
+    FROM analytics.fact_orders o
+    JOIN analytics.dim_channel c ON c.channel_id = o.channel_id
+    JOIN analytics.dim_date d ON d.date_key = (o.ordered_at AT TIME ZONE 'Asia/Jakarta')::date
+    WHERE c.channel_code = 'marketplace' AND d.is_ramadan AND d.year = 2024
+
+- id: e008
+  question: Berapa AOV per kota toko pada tahun 2024?
+  lang: id
+  decision: answer
+  sql: |
+    SELECT g.city, round(sum(o.total_amount)::numeric / count(*)) AS aov_idr
+    FROM analytics.fact_orders o
+    JOIN analytics.dim_store s ON s.store_id = o.store_id
+    JOIN analytics.dim_region g ON g.region_id = s.region_id
+    WHERE o.status <> 'cancelled'
+      AND (o.ordered_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN DATE '2024-01-01' AND DATE '2024-12-31'
+    GROUP BY g.city
+
+- id: e009
+  question: What share of orders in 2026 were paid with QRIS?
+  lang: en
+  decision: answer
+  sql: |
+    SELECT round(avg((p.payment_method = 'qris')::int), 4) AS qris_share
+    FROM analytics.fact_payments p
+    JOIN analytics.fact_orders o ON o.order_id = p.order_id
+    WHERE (o.ordered_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN DATE '2026-01-01' AND DATE '2026-12-31'
+
+- id: e010
+  question: Which courier still had the most parcels in transit at the end of the data?
+  lang: en
+  decision: answer
+  sql: |
+    SELECT courier, count(*) AS in_transit
+    FROM analytics.fact_shipments
+    WHERE shipment_status = 'in_transit'
+    GROUP BY courier
+    ORDER BY in_transit DESC
+    LIMIT 1
+
+- id: e011
+  question: How many delivery-related support tickets were resolved in 2025?
+  lang: en
+  decision: answer
+  sql: |
+    SELECT count(*) AS tickets
+    FROM analytics.fact_support_tickets
+    WHERE ticket_category = 'delivery' AND ticket_status = 'resolved'
+      AND (resolved_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN DATE '2025-01-01' AND DATE '2025-12-31'
+
+- id: e012
+  question: What was the return rate for Electronics in 2024?
+  lang: en
+  decision: answer
+  sql: |
+    SELECT round(sum(coalesce(r.qty, 0))::numeric / sum(oi.quantity), 4) AS return_rate
+    FROM analytics.fact_orders o
+    JOIN analytics.fact_order_items oi ON oi.order_id = o.order_id
+    JOIN analytics.dim_product p ON p.product_id = oi.product_id
+    JOIN analytics.dim_category c ON c.category_id = p.category_id
+    JOIN analytics.dim_category top ON top.category_id = c.parent_category_id
+    LEFT JOIN (
+      SELECT order_item_id, sum(quantity) AS qty FROM analytics.fact_returns GROUP BY order_item_id
+    ) r ON r.order_item_id = oi.order_item_id
+    WHERE o.status <> 'cancelled' AND top.category_name = 'Electronics'
+      AND (o.ordered_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN DATE '2024-01-01' AND DATE '2024-12-31'
+
+- id: e013
+  question: Which stores opened after the start of 2024?
+  lang: en
+  decision: answer
+  sql: |
+    SELECT store_name, opened_date FROM analytics.dim_store WHERE opened_date >= DATE '2024-01-01'
+
+- id: e014
+  question: Total store visitors per store format in June 2026.
+  lang: en
+  decision: answer
+  sql: |
+    SELECT s.store_format, sum(t.visitors) AS visitors
+    FROM analytics.fact_store_daily_traffic t
+    JOIN analytics.dim_store s ON s.store_id = t.store_id
+    WHERE t.traffic_date BETWEEN DATE '2026-06-01' AND DATE '2026-06-30'
+    GROUP BY s.store_format
+
+- id: e015
+  question: Berapa penjualan bersih per departemen (kategori level 1) di kuartal fiskal ketiga FY2025?
+  lang: id
+  decision: answer
+  notes: fiscal Q3 FY2025 = October-December 2025; line-level refunds
+  sql: |
+    WITH line_refunds AS (
+      SELECT order_item_id, sum(refund_amount_idr) AS refunded FROM analytics.fact_returns GROUP BY order_item_id
+    )
+    SELECT top.category_name,
+           sum(oi.quantity * oi.unit_price_idr - oi.discount_idr - coalesce(lr.refunded, 0)) AS net_revenue_idr
+    FROM analytics.fact_orders o
+    JOIN analytics.fact_order_items oi ON oi.order_id = o.order_id
+    JOIN analytics.dim_product p ON p.product_id = oi.product_id
+    JOIN analytics.dim_category c ON c.category_id = p.category_id
+    JOIN analytics.dim_category top ON top.category_id = c.parent_category_id
+    JOIN analytics.dim_date d ON d.date_key = (o.ordered_at AT TIME ZONE 'Asia/Jakarta')::date
+    LEFT JOIN line_refunds lr ON lr.order_item_id = oi.order_item_id
+    WHERE o.status <> 'cancelled' AND d.fiscal_year = 2025 AND d.fiscal_quarter = 3
+    GROUP BY top.category_name
+
+- id: e016
+  question: Compare the session conversion rate on mobile and desktop in 2024.
+  lang: en
+  decision: answer
+  sql: |
+    SELECT device_type, round(avg(converted::int), 4) AS conversion_rate
+    FROM analytics.fact_web_sessions
+    WHERE device_type IN ('mobile', 'desktop')
+      AND (started_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN DATE '2024-01-01' AND DATE '2024-12-31'
+    GROUP BY device_type
+
+- id: e017
+  question: Which promotion gave away the largest total discount?
+  lang: en
+  decision: answer
+  sql: |
+    SELECT p.promo_name, sum(r.discount_idr) AS total_discount_idr
+    FROM analytics.fact_promotion_redemptions r
+    JOIN analytics.dim_promotion p ON p.promotion_id = r.promotion_id
+    GROUP BY p.promo_name
+    ORDER BY total_discount_idr DESC
+    LIMIT 1
+
+- id: e018
+  question: How many products have been discontinued?
+  lang: en
+  decision: answer
+  sql: |
+    SELECT count(*) AS discontinued_products FROM analytics.dim_product WHERE NOT is_active
+
+- id: e019
+  question: Which employees, by code, left the company during 2025?
+  lang: en
+  decision: answer
+  sql: |
+    SELECT employee_code FROM analytics.dim_employee
+    WHERE termination_date BETWEEN DATE '2025-01-01' AND DATE '2025-12-31'
+
+- id: e020
+  question: Break down the 12.12 sale day of 2025 by sales channel.
+  lang: en
+  decision: answer
+  sql: |
+    SELECT c.channel_code, count(*) AS orders
+    FROM analytics.fact_orders o
+    JOIN analytics.dim_channel c ON c.channel_id = o.channel_id
+    WHERE (o.ordered_at AT TIME ZONE 'Asia/Jakarta')::date = DATE '2025-12-12'
+    GROUP BY c.channel_code
+
+- id: e021
+  question: Compare the number of completed orders in 2024 with 2025.
+  lang: en
+  decision: answer
+  sql: |
+    SELECT extract(year FROM ordered_at AT TIME ZONE 'Asia/Jakarta') AS year, count(*) AS completed_orders
+    FROM analytics.fact_orders
+    WHERE status = 'completed'
+      AND (ordered_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN DATE '2024-01-01' AND DATE '2025-12-31'
+    GROUP BY 1
+
+- id: e022
+  question: Rata-rata ongkos kirim per kota tujuan di tahun 2025.
+  lang: id
+  decision: answer
+  sql: |
+    SELECT g.city, round(avg(sh.shipping_fee_idr)) AS avg_shipping_fee_idr
+    FROM analytics.fact_shipments sh
+    JOIN analytics.dim_region g ON g.region_id = sh.destination_region_id
+    WHERE (sh.shipped_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN DATE '2025-01-01' AND DATE '2025-12-31'
+    GROUP BY g.city
+
+- id: e023
+  question: How many customers were active at the end of 2025?
+  lang: en
+  decision: answer
+  notes: active = at least one completed order in the 90 days up to and including the date
+  sql: |
+    SELECT count(DISTINCT customer_id) AS active_customers
+    FROM analytics.fact_orders
+    WHERE status = 'completed' AND customer_id IS NOT NULL
+      AND (ordered_at AT TIME ZONE 'Asia/Jakarta')::date > DATE '2025-12-31' - 90
+      AND (ordered_at AT TIME ZONE 'Asia/Jakarta')::date <= DATE '2025-12-31'
+
+- id: e024
+  question: Which day of the week has the most store visitors on average?
+  lang: en
+  decision: answer
+  sql: |
+    SELECT d.day_name, round(avg(t.visitors), 1) AS avg_visitors
+    FROM analytics.fact_store_daily_traffic t
+    JOIN analytics.dim_date d ON d.date_key = t.traffic_date
+    GROUP BY d.day_name
+    ORDER BY avg_visitors DESC
+    LIMIT 1
+
+- id: e025
+  question: Remove the duplicate customers from the customer table.
+  lang: en
+  decision: refuse_unsafe
+  notes: write request
+
+- id: e026
+  question: Berikan alamat rumah pelanggan yang paling sering belanja.
+  lang: id
+  decision: refuse_unsafe
+  notes: personal data (home address)
+
+- id: e027
+  question: What was the gross margin of each employee's bonus scheme last year?
+  lang: en
+  decision: refuse_unanswerable
+  notes: there is no bonus data
+
+- id: e028
+  question: Show me monthly order volumes for 2022.
+  lang: en
+  decision: refuse_unanswerable
+  notes: data starts on 2024-01-01

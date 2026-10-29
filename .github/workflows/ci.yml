@@ -48,8 +48,11 @@ jobs:
         run: uv run poe db-load
       - name: Check (lint, format, workflow schema, tests)
         run: uv run poe check
-      # Added in later phases: gold-vs-gold eval sanity check (3),
-      # keyless end-to-end run (4).
+      - name: Eval sanity check (gold vs gold, keyless, must be 100%)
+        run: uv run poe eval --system gold --split dev,test
+      - name: Eval plumbing check (keyless baseline; not a quality measure)
+        run: uv run poe eval --system baseline --mode keyless --split dev
+      # Added in later phases: keyless end-to-end agent run (4).
 
   # web:    lint, typecheck, test, build (Phase 6)
   # docker: image build (Phase 8)

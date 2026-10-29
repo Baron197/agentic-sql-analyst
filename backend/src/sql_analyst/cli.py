@@ -1,9 +1,9 @@
-"""Command-line entry point. `ask` arrives in Phase 4 and `eval` in Phase 3."""
+"""Command-line entry point. `ask` arrives in Phase 4 (the eval harness is `python -m eval.run_eval`)."""
 
 import argparse
 import sys
 
-_NOT_YET = {"ask": "Phase 4 (agent core)", "eval": "Phase 3 (evaluation harness)"}
+_NOT_YET = {"ask": "Phase 4 (agent core)"}
 
 
 def main(argv: list[str] | None = None) -> int:

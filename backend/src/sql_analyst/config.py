@@ -27,6 +27,12 @@ class Settings(BaseSettings):
     query_row_limit: int = 1_000
     query_cost_limit: float = 250_000.0  # EXPLAIN total cost; calibration in docs/SECURITY.md
 
+    # LLM: 'fake' is keyless (tests, CI). Live providers need their key and Baron's OK to run.
+    llm_provider: str = "fake"
+    llm_model: str = "claude-haiku-5-5"
+    llm_effort: str = ""  # empty = the model's default effort
+    anthropic_api_key: SecretStr = SecretStr("")
+
     def admin_conninfo(self) -> str:
         """Connection string for the owner role (schema setup and seeding only, never the agent)."""
         return make_conninfo(
