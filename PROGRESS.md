@@ -9,7 +9,7 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 | 0 Scaffold | **done** (2026-10-29) | all DoD items pass; see session log |
 | 1 Synthetic enterprise database | **done** (2026-10-29) | all DoD items pass; see session log |
 | 2 Safety layer | **done** (2026-10-29) | all DoD items pass; see session log |
-| 3 Eval harness, golden set, baseline | not started | next |
+| 3 Eval harness, golden set, baseline | **in progress** | all DoD items pass except the live 10-question baseline run (needs Baron's OK + `ANTHROPIC_API_KEY`) |
 | 4 Agent core | not started | |
 | 5 API | not started | |
 | 6 Web app | not started | |
@@ -27,7 +27,7 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 
 ## Open questions for Baron
 
-- Live LLM provider and model for Phase 4 (options and rough costs in BUILD_GUIDE §8.4).
+- Live LLM provider: Anthropic chosen for the Phase 3 baseline run (model `claude-haiku-5-5` proposed for that run only). The final model choice is Phase 7.
 - Deploy target for Phase 8: Azure (A) or the existing AWS EC2 (B).
 - GitHub repository name and visibility (only when Baron says to push). CI has not run on GitHub yet; it is only schema-validated locally.
 - License: none chosen yet (the flagship uses MIT). Add before the repo goes public.
@@ -37,19 +37,62 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 - CI has never run on GitHub (nothing pushed). Its db tests assume the full-scale seed, which the workflow loads with `poe db-load` before `poe check`; the workflow sets throwaway `NLQ_READER_PASSWORD` and `RLS_SIGNING_KEY` values.
 - Layers 1 (input guard), 7 (hostile data), and 8 (budget, rate limit, spend cap, kill switch) of BUILD_GUIDE §7 are not built yet; they belong to Phases 4-5 and are listed in docs/SECURITY.md under "Threats covered in later phases".
 - The function allow-list (D014) may refuse a legitimate function the agent needs; watch for `forbidden_function` errors in the Phase 3/4 eval and add functions deliberately.
+- Gold SQL is Claude's reading of each question. Baron should spot-check the ambiguous and metric-definition cases before any test-split number is quoted.
+- Whether an answer repeats the planted injection (t056) is not scored automatically yet (D020); Phase 4 templates make it testable.
 - Docker Desktop 4.80 on this machine crashed at startup because of leftover AF_UNIX socket files that Windows refuses to delete (error 1920). Workaround used on 2026-10-29: quit Docker Desktop and rename the folders aside: `%LOCALAPPDATA%\Docker\run` and `%LOCALAPPDATA%\docker-secrets-engine` (now `*.stale-20261029*`). They can be deleted after a reboot. If Docker fails to start again with "The file cannot be accessed by the system", repeat that. Quitting Docker Desktop normally (not killing it) should avoid it.
 
 ## Next step
 
-Phase 3: Evaluation harness, golden set, and baseline (BUILD_GUIDE §9 and §13). Start with a plan covering:
-- about 100 YAML cases in `eval/cases/dev.yaml` (~40) and `eval/cases/test.yaml` (~60), ~20% Indonesian, across every category in §9 (including `access_control` cases for the Jakarta manager, adversarial cases, and one for the planted injection ticket `TCK-2026-004660`). Gold SQL must pass the validator and run through `safety.executor.Executor` with the case's user scope;
-- the harness `uv run poe eval --mode keyless|live --split dev|test --repeats N --system agent|baseline --model …`, metrics (EX strict/lenient, valid SQL rate, safety block rate, refusal accuracy, latency/cost), and JSON + markdown output in `eval/results/`;
-- the single-prompt baseline, `data/examples.yaml`, and the leakage-guard test;
-- the 10-question live baseline run needs Baron's OK and a cost estimate first. Phase 3 needs an LLM provider for that run (open question above).
+Finish Phase 3: the live 10-question baseline run on `dev` (the last DoD item). It needs, in order:
+1. Baron adds `ANTHROPIC_API_KEY=...` to `.env` himself (never in chat).
+2. Baron's explicit OK for: model `claude-haiku-5-5`, 10 dev questions × 1 repeat, ~20 calls, estimated cost ≤ $0.03 (system prompt ~10.8k tokens). Sonnet 5.5 would be ≤ $0.45, Opus 5.5 ≤ $0.89.
+3. Run: `uv run poe eval --system baseline --mode live --split dev --limit 10 --confirm-live` (add `--model claude-haiku-5-5` to be explicit). Check that the results file shows real tokens, cache reads on the second and later calls, and a total cost that matches the Anthropic console.
+4. Commit the results file. Write a short note in PROGRESS that it proves cost tracking only; 10 dev questions are not an accuracy result.
+
+Then Phase 4 (agent core), starting with a plan.
 
 ## Session log
 
 _(newest first: date, what was done, decisions, issues)_
+
+### 2026-10-30: Phase 3 eval harness, golden set, baseline (in progress)
+
+**Built**
+- `eval/cases/dev.yaml` (40) and `eval/cases/test.yaml` (60):
+  - all nine categories in both splits, 28% Indonesian;
+  - every expected behaviour: answer, refuse_unsafe, refuse_unanswerable, state_assumption;
+  - access-control cases asked by the Jakarta manager;
+  - the planted-injection ticket in t055/t056.
+  - Every gold SQL passes the validator and runs under its case's scope in ≤ 576 ms with < 1,000 rows. Every top-N gold was checked for ties at the cut-off (none).
+- `eval/cases.py`: models, users → `UserScope`, `AS_OF_DATE` 2026-10-01.
+- `eval/metrics.py`: EX strict/lenient (D019), grounding check, percentiles, mean ± std.
+- `eval/systems.py` (`Prediction`, `GoldSystem`) and `eval/baseline.py`: single prompt with the whole dictionary (~10.8k tokens) → SQL → scoped executor → free-text answer; plus the keyless rule responder.
+- `eval/run_eval.py`:
+  - CLI `--system gold|baseline|agent --mode keyless|live --split dev[,test] --repeats --limit --model --confirm-live`;
+  - repeats with mean ± std, safety gate, database fingerprint before and after;
+  - JSON (every case) + markdown results in `eval/results/`, labelled SANITY CHECK / PLUMBING ONLY / LIVE.
+- `eval/leakage.py` and `data/examples.yaml`: 28 few-shot examples. Closest example/eval question similarity is 0.78, under the 0.85 limit; no SQL is equal to a gold SQL.
+- `backend/src/sql_analyst/llm/`: `base.py`, `pricing.py`, `fake.py`, `anthropic.py`, `factory.py`; settings `LLM_PROVIDER`, `LLM_MODEL`, `LLM_EFFORT`, `ANTHROPIC_API_KEY`. Moved forward from Phase 4 (D018).
+- Tests (446 total):
+  - `evaluation/test_cases_and_leakage.py`, `test_metrics.py`, `test_harness.py`: gold vs gold, the keyless run, the live guard with no network, every example SQL runs;
+  - `unit/test_llm.py`: pricing, the fake, the Anthropic adapter against a stub.
+- CI: gold-vs-gold and keyless plumbing eval steps.
+
+**DoD evidence (2026-10-30, commit 074e2e0)**
+- Gold vs gold EX = 100%: `eval/results/2026-10-30_gold_na_dev+test_na_n100_r1.md`. EX strict and lenient, valid SQL, refusal accuracy, and unsafe refusals are all 1.0 over 100 cases; the database is unchanged.
+- Every gold SQL passes the validator: `test_every_gold_sql_passes_the_validator`, 79 cases.
+- The keyless run completes and is labelled "PLUMBING ONLY": `eval/results/2026-10-30_baseline_keyless_dev_fake-keyless_n40_r1.md`. EX 0.0 is expected for a fake that sends one fixed query.
+- The leakage test passes, and it was shown to catch a planted duplicate question and a copied gold SQL.
+- `uv run poe check`: ruff clean, 71 files formatted, workflow schema valid, 446 passed.
+- **Not done:** the live 10-question baseline (needs Baron's OK and the API key; see Next step).
+
+**Decisions:** D017-D022 in `docs/DECISIONS.md`:
+- fixed "today";
+- the LLM layer built early;
+- how EX is scored;
+- what the safety and grounding metrics mean;
+- `--confirm-live`;
+- `eval/` layout.
 
 ### 2026-10-29: Phase 2 safety layer (done)
 

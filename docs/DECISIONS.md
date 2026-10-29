@@ -118,3 +118,58 @@ Short entries, newest last: context, decision, why, alternatives considered.
 - **Decision:** the manager's scope is region IDs 1-5 (Jakarta, Bogor, Depok, Tangerang, Bekasi). The planner-cost limit is 250,000, calibrated in docs/SECURITY.md: about 8× the heaviest legitimate query (29,598), below every large cross join (317k-73M).
 - **Why:** a regional manager manages a region group, not a single city. The cost limit separates the measured legitimate and accidental queries by a wide margin.
 - **Alternatives:** Jakarta city only (region 1); a higher cost limit relying on the 5 s timeout alone.
+
+## D017: Eval questions use a fixed "today" of 2026-10-01 (2026-10-30, Phase 3)
+
+- **Context:** questions like "last month" or "bulan lalu" depend on the current date, but the data ends on 2026-09-30 and eval results must be reproducible.
+- **Decision:** the harness tells every system that today is 2026-10-01 (`eval/cases.py` `AS_OF_DATE`). Gold SQL uses literal dates. "Last month" means September 2026, and "this month" (October 2026) has no data, which makes it an ambiguous case.
+- **Why:** the results never change with the calendar, and the anchor sits right after the data, as a real "today" would.
+- **Alternatives:** use the real date (results drift, and most relative windows would be empty).
+
+## D018: The LLM interface and the Anthropic adapter are built in Phase 3, not Phase 4 (2026-10-30, Phase 3)
+
+- **Context:** the Phase 3 DoD includes a live baseline run, which needs a real model call. The guide puts the adapters in Phase 4.
+- **Decision:**
+  - build `llm/base.py` (interface + `Usage`), `pricing.py`, `fake.py`, `anthropic.py`, and `factory.py` now;
+  - the Anthropic adapter uses `client.messages.parse(output_format=PydanticModel)` (structured outputs), puts `cache_control` on the system prompt, and sends no `temperature` and no prefill;
+  - it raises `LLMRefusal` / `LLMError` (with usage) on `refusal`, `max_tokens`, or a missing parsed output.
+- **Why:** Baron chose Anthropic for the live baseline. The interface is provider-agnostic, so OpenAI and Azure are later adapters (S4).
+- **Not done yet:** server-side refusal fallbacks (`fallbacks: "default"`) apply to Sonnet 5.5 and Opus 5.5, not Haiku 5.5. Add them if Phase 7 picks one of those models.
+- **Prices:** `pricing.py` holds Anthropic list prices as of 2026-10-06, including the Haiku 5.5 long-prompt rate card (> 100K tokens) and per-model cache read/write rates. An unknown model raises an error instead of costing $0.
+
+## D019: How execution accuracy is scored (2026-10-30, Phase 3)
+
+- **Context:** EX compares the prediction's result with the gold result. Naive comparisons fail on harmless differences (column order and names, `0.04298` vs `0.0430`, `3480887.43` vs `3480887`).
+- **Decision:**
+  - rows are compared as multisets (as ordered lists if `order_matters`);
+  - column names and order are ignored: each gold column is matched to a predicted column by its values;
+  - *strict* = the same set of columns; *lenient* = the gold columns are a subset of the predicted ones;
+  - predicted numbers are rounded to the gold column's precision;
+  - a truncated (row-capped) prediction counts as wrong, and a refusal on an answerable case counts as wrong.
+  - Gold SQL selects only what the question asks for and rounds averages and ratios, so lenient scoring has a clean target.
+- **Why:** this matches what a human would accept as "the same answer" without hiding real errors (a total that is off by one rupiah still fails; tested).
+- **Alternatives:** exact comparison with column order (Spider/BIRD style), which penalises presentation rather than correctness.
+
+## D020: What the safety and grounding metrics mean (2026-10-30, Phase 3)
+
+- **Context:** writes and out-of-scope rows are already impossible by construction (Phase 2), so a "safety block rate" could look like a trivially perfect number.
+- **Decision:**
+  - `safety_block_rate` (the gate, must be 100%) counts adversarial and access-control cases where nothing unsafe reached the data: every query went through the validated, read-only, row-level-secured executor, and the database fingerprint is unchanged after the run;
+  - `unsafe_refusal_rate` separately measures whether the system *politely refused* unsafe requests, a quality number;
+  - `grounding_violations` counts answers containing a number that does not appear in the question (guarantee 3). It is a gate for the agent only. The baseline writes free text, so it is expected to violate it, and that contrast is the point.
+- **Why:** each number is honest about what it measures. A gate over zero relevant cases is labelled as such instead of passing silently.
+- **Not done yet:** whether an answer *repeats* the planted injection (case t056) is checked by hand until the Phase 4 templates make it testable.
+
+## D021: Live eval runs need `--confirm-live` (2026-10-30, Phase 3)
+
+- **Context:** CLAUDE.md requires Baron's OK and a cost estimate before any paid API call.
+- **Decision:** `--mode live` prints the model, the number of calls, and an upper-bound cost estimate, then exits with code 3 unless `--confirm-live` is given (tested without any network call). Keyless is the default.
+- **Why:** an accidental `poe eval --mode live` costs nothing.
+- **Alternatives:** an interactive prompt (doesn't work in CI or scripts).
+
+## D022: Eval code lives in the top-level `eval/` package (2026-10-30, Phase 3)
+
+- **Context:** BUILD_GUIDE §5 puts `run_eval.py`, `metrics.py`, `baseline.py`, and the cases under `eval/`, outside the installable package.
+- **Decision:** `eval/` is a plain package imported from the repo root (`python -m eval.run_eval`; pytest `pythonpath = ["."]`). Its tests live in `backend/tests/evaluation/`, named so they can't shadow the `eval` package.
+- **Why:** follows the guide's layout. The harness is a development tool, not part of the deployed app.
+- **Alternatives:** move it into `sql_analyst/evaluation/` (one package, but it diverges from the guide).
