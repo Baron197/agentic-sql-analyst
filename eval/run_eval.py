@@ -175,12 +175,16 @@ def db_fingerprint(settings: Settings) -> str:
 
 
 def git_commit() -> str:
+    """Short HEAD sha, with -dirty if code or data differ from it (result files excluded)."""
     try:
         sha = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, check=True
         ).stdout.strip()
         dirty = subprocess.run(
-            ["git", "status", "--porcelain"], capture_output=True, text=True, check=True
+            ["git", "status", "--porcelain", "--", ".", ":(exclude)eval/results"],
+            capture_output=True,
+            text=True,
+            check=True,
         ).stdout.strip()
         return sha + ("-dirty" if dirty else "")
     except (OSError, subprocess.CalledProcessError):
