@@ -103,3 +103,71 @@ def test_adapter_raises_when_output_is_cut_off():
     llm, _ = _llm(_response(stop_reason="max_tokens"))
     with pytest.raises(LLMError):
         llm.generate_structured("s", [Message(role="user", content="q")], Out)
+
+
+# ------------------------------------------------------------------ OpenAI
+class _StubResponses:
+    def __init__(self, response):
+        self.response = response
+        self.kwargs = None
+
+    def parse(self, **kwargs):
+        self.kwargs = kwargs
+        return self.response
+
+
+def _openai_response(status="completed", parsed=None, output=(), input_tokens=10_000, cached=8_000):
+    usage = SimpleNamespace(
+        input_tokens=input_tokens,  # OpenAI: includes the cached tokens
+        input_tokens_details=SimpleNamespace(cached_tokens=cached, cache_write_tokens=0),
+        output_tokens=300,
+        output_tokens_details=SimpleNamespace(reasoning_tokens=0),
+    )
+    return SimpleNamespace(
+        status=status, output_parsed=parsed, output=list(output), usage=usage,
+        incomplete_details=SimpleNamespace(reason="max_output_tokens"), model="gpt-4o-mini-2024-07-18",
+    )  # fmt: skip
+
+
+def _openai_llm(response):
+    from sql_analyst.llm.openai import OpenAILLM
+
+    stub = _StubResponses(response)
+    return OpenAILLM("gpt-4o-mini", client=SimpleNamespace(responses=stub)), stub
+
+
+def test_openai_adapter_uses_structured_outputs_and_subtracts_cached_tokens():
+    llm, stub = _openai_llm(_openai_response(parsed=Out(answer="hi")))
+    out, usage = llm.generate_structured(
+        "SYSTEM", [Message(role="user", content="q")], Out, max_tokens=500
+    )
+    assert out.answer == "hi"
+    assert stub.kwargs["text_format"] is Out and stub.kwargs["instructions"] == "SYSTEM"
+    assert stub.kwargs["store"] is False
+    assert not {"temperature", "top_p", "tool_choice"} & set(stub.kwargs)
+    assert (usage.input_tokens, usage.cache_read_tokens, usage.output_tokens) == (2_000, 8_000, 300)
+    assert usage.model == "gpt-4o-mini"  # billed by the requested id, not the dated snapshot
+    expected = (2_000 * 0.15 + 8_000 * 0.075 + 300 * 0.60) / 1_000_000
+    assert usage.cost_usd == pytest.approx(expected)
+
+
+def test_openai_adapter_raises_on_incomplete_and_refusal():
+    llm, _ = _openai_llm(_openai_response(status="incomplete"))
+    with pytest.raises(LLMError):
+        llm.generate_structured("s", [Message(role="user", content="q")], Out)
+    refusal = SimpleNamespace(
+        content=[SimpleNamespace(type="refusal", refusal="I can't help with that.")]
+    )
+    llm, _ = _openai_llm(_openai_response(output=[refusal]))
+    with pytest.raises(LLMRefusal) as info:
+        llm.generate_structured("s", [Message(role="user", content="q")], Out)
+    assert info.value.usage is not None
+
+
+def test_provider_is_inferred_from_the_model_id():
+    from sql_analyst.llm.factory import provider_for_model
+
+    assert provider_for_model("claude-haiku-5-5") == "anthropic"
+    assert provider_for_model("gpt-4o-mini") == "openai"
+    assert provider_for_model("o4-mini") == "openai"
+    assert provider_for_model("mystery") is None

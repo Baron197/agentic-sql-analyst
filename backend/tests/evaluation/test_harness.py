@@ -73,19 +73,41 @@ def test_keyless_baseline_run_completes_and_is_labelled_plumbing_only(results_di
     assert "PLUMBING ONLY" in md and "mean ± std" in md
 
 
-def test_live_mode_refuses_to_run_without_confirmation(results_dir, monkeypatch, capsys):
+@pytest.mark.parametrize(
+    ("model", "key_field"),
+    [("claude-haiku-5-5", "anthropic_api_key"), ("gpt-4o-mini", "openai_api_key")],
+)
+def test_live_mode_refuses_to_run_without_confirmation(
+    results_dir, monkeypatch, capsys, model, key_field
+):
     """No API call is made: the run stops after printing the cost estimate."""
-    settings = get_settings().model_copy(
-        update={"anthropic_api_key": SecretStr("sk-test-not-a-real-key")}
-    )
+    settings = get_settings().model_copy(update={key_field: SecretStr("sk-test-not-a-real-key")})
     monkeypatch.setattr(run_eval, "get_settings", lambda: settings)
-    assert (
-        run_eval.main(["--system", "baseline", "--mode", "live", "--split", "dev", "--limit", "10"])
-        == 3
-    )
+    argv = [
+        "--system",
+        "baseline",
+        "--mode",
+        "live",
+        "--split",
+        "dev",
+        "--limit",
+        "10",
+        "--model",
+        model,
+    ]
+    assert run_eval.main(argv) == 3
     out = capsys.readouterr().out
-    assert "Estimated cost" in out and "--confirm-live" in out
+    assert f"model={model}" in out and "Estimated cost" in out and "--confirm-live" in out
     assert not list(results_dir.iterdir())
+
+
+def test_live_mode_without_a_key_fails_before_any_call(results_dir, monkeypatch):
+    settings = get_settings().model_copy(update={"openai_api_key": SecretStr("")})
+    monkeypatch.setattr(run_eval, "get_settings", lambda: settings)
+    with pytest.raises(Exception, match="OPENAI_API_KEY"):
+        run_eval.main(
+            ["--system", "baseline", "--mode", "live", "--split", "dev", "--model", "gpt-4o-mini"]
+        )
 
 
 def test_agent_system_is_not_available_before_phase_4(results_dir):

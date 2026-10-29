@@ -173,3 +173,15 @@ Short entries, newest last: context, decision, why, alternatives considered.
 - **Decision:** `eval/` is a plain package imported from the repo root (`python -m eval.run_eval`; pytest `pythonpath = ["."]`). Its tests live in `backend/tests/evaluation/`, named so they can't shadow the `eval` package.
 - **Why:** follows the guide's layout. The harness is a development tool, not part of the deployed app.
 - **Alternatives:** move it into `sql_analyst/evaluation/` (one package, but it diverges from the guide).
+
+## D023: OpenAI adapter for the live baseline run (2026-10-30, Phase 3)
+
+- **Context:** Baron has an OpenAI API key and asked to use OpenAI for the live baseline run instead of Anthropic. BUILD_GUIDE §8.3 lists OpenAI as one of the live providers.
+- **Decision:**
+  - `llm/openai.py` uses the Responses API, `client.responses.parse(text_format=PydanticModel)` (structured outputs, checked against the installed `openai` 3.41.0), with the system prompt in `instructions`, `store=False`, and no `temperature`;
+  - OpenAI's `input_tokens` includes cached tokens, so uncached = input − cached;
+  - cost is computed from the requested model id (the response may carry a dated snapshot id);
+  - `incomplete` responses and refusals raise `LLMError` / `LLMRefusal` with the usage attached;
+  - the harness infers the provider from `--model` (`gpt-*` → openai, `claude-*` → anthropic) or takes `--provider`.
+- **Prices:** OpenAI standard tier, read from developers.openai.com/api/docs/pricing on 2026-10-30: `gpt-4o-mini` $0.15 / $0.60 (cached $0.075); `gpt-6-luna` $0.10 / $0.50 (cached $0.01); `gpt-5-mini` $0.25 / $2.00. The page lists no cache-write price, so writes are assumed to cost the normal input rate.
+- **Why:** the interface stays provider-agnostic, so the Anthropic adapter stays and the final model choice is still Phase 7.

@@ -2,7 +2,7 @@
 
     uv run poe eval --system gold --split dev                      # sanity: gold vs gold
     uv run poe eval --system baseline --mode keyless --split dev   # plumbing only, free
-    uv run poe eval --system baseline --mode live --split dev --limit 10 --confirm-live
+    uv run poe eval --system baseline --mode live --split dev --limit 10 --model gpt-4o-mini --confirm-live
 
 Live mode calls a paid API: it prints a cost estimate and refuses to run without
 --confirm-live (CLAUDE.md: live runs need Baron's OK first). Results go to eval/results/
@@ -28,7 +28,7 @@ from eval.systems import GoldSystem, Prediction, System
 from sql_analyst.config import Settings, get_settings
 from sql_analyst.db.checksum import combined, table_checksums
 from sql_analyst.dictionary.loader import load_dictionary
-from sql_analyst.llm.factory import make_llm
+from sql_analyst.llm.factory import make_llm, provider_for_model
 from sql_analyst.llm.pricing import PRICES_AS_OF, cost_usd
 from sql_analyst.safety.errors import SafetyError
 from sql_analyst.safety.executor import Executor
@@ -204,9 +204,16 @@ def build_system(args: argparse.Namespace, settings: Settings, executor: Executo
     if args.system == "gold":
         return GoldSystem(executor)
     if args.system == "baseline":
-        provider = "fake" if args.mode == "keyless" else settings.llm_provider
-        if args.mode == "live" and provider == "fake":
-            provider = "anthropic"
+        if args.mode == "keyless":
+            provider = "fake"
+        else:  # explicit --provider, else inferred from --model, else LLM_PROVIDER
+            provider = (
+                args.provider
+                or (args.model and provider_for_model(args.model))
+                or settings.llm_provider
+            )
+            if provider == "fake":
+                raise SystemExit("Live mode needs a real provider: pass --provider or --model.")
         llm = make_llm(provider, args.model, settings, fake_responder=keyless_responder)
         return BaselineSystem(llm, executor, load_dictionary())
     raise SystemExit("--system agent is built in Phase 4; it is not available yet.")
@@ -303,6 +310,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--repeats", type=int, default=1)
     p.add_argument("--limit", type=int, default=None, help="only the first N cases of each split")
     p.add_argument("--model", default=None, help="live model id (default: LLM_MODEL)")
+    p.add_argument(
+        "--provider",
+        choices=["anthropic", "openai"],
+        default=None,
+        help="live provider (default: inferred from --model, else LLM_PROVIDER)",
+    )
     p.add_argument(
         "--confirm-live", action="store_true", help="required for --mode live (paid API)"
     )
