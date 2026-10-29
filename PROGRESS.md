@@ -8,8 +8,8 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 |---|---|---|
 | 0 Scaffold | **done** (2026-10-29) | all DoD items pass; see session log |
 | 1 Synthetic enterprise database | **done** (2026-10-29) | all DoD items pass; see session log |
-| 2 Safety layer | not started | next |
-| 3 Eval harness, golden set, baseline | not started | |
+| 2 Safety layer | **done** (2026-10-29) | all DoD items pass; see session log |
+| 3 Eval harness, golden set, baseline | not started | next |
 | 4 Agent core | not started | |
 | 5 API | not started | |
 | 6 Web app | not started | |
@@ -34,23 +34,72 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 
 ## Open issues
 
-- CI has never run on GitHub (nothing pushed). Its db tests assume the full-scale seed, which the workflow loads with `poe db-load` before `poe check`.
+- CI has never run on GitHub (nothing pushed). Its db tests assume the full-scale seed, which the workflow loads with `poe db-load` before `poe check`; the workflow sets throwaway `NLQ_READER_PASSWORD` and `RLS_SIGNING_KEY` values.
+- Layers 1 (input guard), 7 (hostile data), and 8 (budget, rate limit, spend cap, kill switch) of BUILD_GUIDE §7 are not built yet; they belong to Phases 4-5 and are listed in docs/SECURITY.md under "Threats covered in later phases".
+- The function allow-list (D014) may refuse a legitimate function the agent needs; watch for `forbidden_function` errors in the Phase 3/4 eval and add functions deliberately.
 - Docker Desktop 4.80 on this machine crashed at startup because of leftover AF_UNIX socket files that Windows refuses to delete (error 1920). Workaround used on 2026-10-29: quit Docker Desktop and rename the folders aside: `%LOCALAPPDATA%\Docker\run` and `%LOCALAPPDATA%\docker-secrets-engine` (now `*.stale-20261029*`). They can be deleted after a reboot. If Docker fails to start again with "The file cannot be accessed by the system", repeat that. Quitting Docker Desktop normally (not killing it) should avoid it.
 
 ## Next step
 
-Phase 2: Safety layer (BUILD_GUIDE §7 and §13), before any LLM code. Start with a plan covering:
-- the `nlq_reader` role (SELECT on `analytics` only, `default_transaction_read_only = on`), created so it survives `db-reset` (D011);
-- row-level security on region-scoped views keyed on `SET LOCAL app.region_ids`. Views read `core` as their owner, so RLS must be designed for views; check `security_invoker` views (PG15+) or security-barrier views filtering on `current_setting('app.region_ids')`. The region of an order is its store's region;
-- masked views if any are needed (D010);
-- the sqlglot validator using `data/dictionary.yaml` (allowed views/columns, `pii` flag, deny-listed functions);
-- the EXPLAIN cost guard, the executor (read-only transaction, 5 s timeout, outer LIMIT 1000, pool);
-- 60+ adversarial tests, including both defense-in-depth tests;
-- `docs/SECURITY.md` with a threat → layer → test table.
+Phase 3: Evaluation harness, golden set, and baseline (BUILD_GUIDE §9 and §13). Start with a plan covering:
+- about 100 YAML cases in `eval/cases/dev.yaml` (~40) and `eval/cases/test.yaml` (~60), ~20% Indonesian, across every category in §9 (including `access_control` cases for the Jakarta manager, adversarial cases, and one for the planted injection ticket `TCK-2026-004660`). Gold SQL must pass the validator and run through `safety.executor.Executor` with the case's user scope;
+- the harness `uv run poe eval --mode keyless|live --split dev|test --repeats N --system agent|baseline --model …`, metrics (EX strict/lenient, valid SQL rate, safety block rate, refusal accuracy, latency/cost), and JSON + markdown output in `eval/results/`;
+- the single-prompt baseline, `data/examples.yaml`, and the leakage-guard test;
+- the 10-question live baseline run needs Baron's OK and a cost estimate first. Phase 3 needs an LLM provider for that run (open question above).
 
 ## Session log
 
 _(newest first: date, what was done, decisions, issues)_
+
+### 2026-10-29: Phase 2 safety layer (done)
+
+**Built**
+- `db/security.sql`, applied by `db-load` after the views:
+  - schema `rls` with pgcrypto, `rls.signing_key`, `SECURITY DEFINER` functions `verified_scope()`, `is_all_scope()`, `visible_regions/stores/customers/orders()`;
+  - row-level security policies on 15 region-scoped `core` tables for `analytics_owner`;
+  - all analytics views owned by `analytics_owner`;
+  - grants: `nlq_reader` gets SELECT on analytics only, `EXECUTE` on the rls functions without schema `USAGE`, and no access to `core`.
+- `db/load.py` `ensure_roles()`:
+  - creates or updates `nlq_reader` (LOGIN; read-only transactions by default, 5 s timeout, `search_path = analytics`, connection limit 20, TEMPORARY revoked) and `analytics_owner` (NOLOGIN);
+  - loads the signing key.
+- `safety/`:
+  - `scope.py`: `UserScope`, `apply_scope` (HMAC-signed, bound to the backend pid and transaction start);
+  - `validator.py`: sqlglot rules 1-6;
+  - `cost_guard.py`: EXPLAIN limit 250,000;
+  - `executor.py`: psycopg pool, READ ONLY transaction, timeout, signed scope, cost check, outer LIMIT 1001 with truncation flag, typed errors;
+  - `errors.py`.
+- Settings: `NLQ_READER_PASSWORD`, `RLS_SIGNING_KEY` (generated into the local `.env`, names in `.env.example`, throwaway values in CI), `query_timeout_ms`, `query_row_limit`, `query_cost_limit`.
+- Tests (282 total; the safety suite is 247):
+  - `safety/test_validator.py`: 101 adversarial cases, 21 must-pass queries, PII-flag and regeneration tests;
+  - `safety/test_executor.py`: the must-pass queries for both scopes, row cap, cost guard on 5 cross joins and a huge `generate_series`, timeout, error mapping;
+  - `safety/test_rls.py`: per-view scoping, 10 cross-region attempts, forgery, widening, replay, no scope, admin without scope;
+  - `safety/test_defense_in_depth.py`: the two guide tests, each write layer alone, and reader-role probes;
+  - `unit/test_security_doc.py`: every threat in SECURITY.md maps to existing tests.
+- The Phase 1 db test fixture now applies a signed `all` scope. Without it, the orphan test passed vacuously on zero rows.
+- `docs/SECURITY.md`: layers, RLS design, threat → layer → test table, cost calibration, residual risks.
+- Test folders are now packages (`__init__.py`) so the safety tests can share fixtures.
+- Added sqlglot 30.25.0 and psycopg-pool 3.3.3.
+
+**DoD evidence (2026-10-29, from a wiped volume)**
+- `db-wipe` then `db-reset`: roles, policies, and grants are created on a fresh cluster in 11.2 s.
+- All safety tests pass, including both defense-in-depth tests:
+  - `test_delete_sent_straight_to_the_database_is_refused`: 8 write statements, all refused;
+  - `test_manager_hand_written_sql_against_another_region_returns_zero_rows`: zero rows through the full path, with the validator bypassed, and with tampering.
+- The threat table maps every threat to a test: `unit/test_security_doc.py` passes, and it was shown to fail when a referenced test is missing.
+- `uv run poe check`: ruff clean, 52 files formatted, workflow schema valid, 282 passed.
+- The seed is unchanged: combined sha256 `917e52ad…f351f938`, as in Phase 1.
+
+**Findings along the way**
+- Postgres checks `EXECUTE` on functions used in policies as the querying role, not the view owner, so `nlq_reader` needs EXECUTE. It gets no schema USAGE, which keeps the functions unreachable from its own SQL.
+- Postgres 16 estimates `generate_series` rows exactly, so the cost guard catches huge series. Recursive CTEs are underestimated, and only the timeout stops those (both tested).
+- `ruff check --fix` / `ruff format` left literal homoglyphs and invisible characters in place of `\u` escapes in the adversarial test strings. They are restored as escapes, so no invisible characters sit in the source.
+
+**Decisions:** D012-D016 in `docs/DECISIONS.md`:
+- row-level security on `core` for the views' owner;
+- the HMAC-signed scope;
+- function allow-list plus deny-list;
+- the executor runs regenerated SQL;
+- Jakarta manager = Jabodetabek, cost limit 250,000.
 
 ### 2026-10-29: Phase 1 synthetic enterprise database (done)
 

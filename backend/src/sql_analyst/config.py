@@ -6,6 +6,8 @@ from psycopg.conninfo import make_conninfo
 from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+READER_ROLE = "nlq_reader"
+
 
 class Settings(BaseSettings):
     """App settings. Secrets have no default and must come from the environment."""
@@ -18,6 +20,13 @@ class Settings(BaseSettings):
     postgres_user: str = "postgres"
     postgres_password: SecretStr = SecretStr("")
 
+    # Safety layer: the agent's read-only login and the key that signs its region scope.
+    nlq_reader_password: SecretStr = SecretStr("")
+    rls_signing_key: SecretStr = SecretStr("")  # hex, at least 32 bytes
+    query_timeout_ms: int = 5_000
+    query_row_limit: int = 1_000
+    query_cost_limit: float = 250_000.0  # EXPLAIN total cost; calibration in docs/SECURITY.md
+
     def admin_conninfo(self) -> str:
         """Connection string for the owner role (schema setup and seeding only, never the agent)."""
         return make_conninfo(
@@ -27,6 +36,22 @@ class Settings(BaseSettings):
             user=self.postgres_user,
             password=self.postgres_password.get_secret_value(),
         )
+
+    def reader_conninfo(self) -> str:
+        """Connection string for the agent's read-only role."""
+        return make_conninfo(
+            host=self.postgres_host,
+            port=self.postgres_port,
+            dbname=self.postgres_db,
+            user=READER_ROLE,
+            password=self.nlq_reader_password.get_secret_value(),
+        )
+
+    def signing_key(self) -> bytes:
+        key = bytes.fromhex(self.rls_signing_key.get_secret_value())
+        if len(key) < 32:
+            raise ValueError("RLS_SIGNING_KEY must be at least 32 bytes of hex")
+        return key
 
 
 @lru_cache

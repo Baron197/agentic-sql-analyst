@@ -33,6 +33,9 @@ jobs:
       POSTGRES_DB: arunika
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ci-only-password
+      # Throwaway values for the disposable CI database, not real secrets.
+      NLQ_READER_PASSWORD: ci-only-reader-password
+      RLS_SIGNING_KEY: "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
       REQUIRE_DB: "1"
     steps:
       - uses: actions/checkout@v7
@@ -45,7 +48,7 @@ jobs:
         run: uv run poe db-load
       - name: Check (lint, format, workflow schema, tests)
         run: uv run poe check
-      # Added in later phases: safety suite (2), gold-vs-gold eval sanity check (3),
+      # Added in later phases: gold-vs-gold eval sanity check (3),
       # keyless end-to-end run (4).
 
   # web:    lint, typecheck, test, build (Phase 6)

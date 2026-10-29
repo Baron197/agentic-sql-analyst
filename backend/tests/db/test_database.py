@@ -9,6 +9,7 @@ from sql_analyst.db.load import SQL_DIR
 from sql_analyst.db.seed.ops import INJECTION_SUBJECT
 from sql_analyst.dictionary.loader import load_dictionary
 from sql_analyst.dictionary.values import MAX_VALUES_PER_COLUMN, fetch_values
+from sql_analyst.safety.scope import UserScope, apply_scope
 
 pytestmark = pytest.mark.db
 
@@ -48,8 +49,16 @@ TYPE_ALIASES = {"timestamptz": "timestamp with time zone"}
 
 @pytest.fixture(scope="module")
 def conn():
-    with psycopg.connect(get_settings().admin_conninfo()) as c:
+    """Admin connection with the signed all-regions scope: the analytics views are
+    row-level secured (Phase 2), so without a scope even the admin sees zero rows.
+    All tests share one transaction, which the signature is bound to."""
+    settings = get_settings()
+    with psycopg.connect(settings.admin_conninfo()) as c:
         c.execute("SET TimeZone = 'UTC'")
+        apply_scope(
+            c, UserScope(user_id="tests", role="analyst", region_ids="all"), settings.signing_key()
+        )
+        assert c.execute("SELECT count(*) FROM analytics.fact_orders").fetchone()[0] > 0
         yield c
 
 

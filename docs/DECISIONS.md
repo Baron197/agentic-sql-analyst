@@ -83,3 +83,38 @@ Short entries, newest last: context, decision, why, alternatives considered.
 - **Decision:** `db-load` drops and recreates the `core` and `analytics` schemas on whatever database `.env` points at; `db-reset` = `db-up` + `db-load`; `db-wipe` = `docker compose down -v`.
 - **Why:** faster, and one code path for local and CI. Cluster-level roles from Phase 2 survive a reset.
 - **Alternatives:** always recreate the container (slower, and impossible in CI).
+
+## D012: Row-level security on `core` tables for the views' owner (2026-10-29, Phase 2)
+
+- **Context:** the guide asks for "policies on region-scoped views", but Postgres row-level security applies only to tables. A view reads its base tables with its owner's privileges.
+- **Decision:** policies live on the `core` tables and target `analytics_owner`, a `NOLOGIN`, non-`BYPASSRLS` role that owns every analytics view. Child tables reach their region through `SECURITY DEFINER` set-returning functions (`rls.visible_stores()`, `rls.visible_orders()`, …), which the planner runs once per query as a hashed subplan.
+- **Why:** everyone reading the views is scoped, the admin role included, and the agent role never needs access to `core`. Heaviest scoped query measured: 238 ms.
+- **Alternatives:** `security_invoker` views (PG15+) would make `nlq_reader` need `SELECT` on `core`; security-barrier views with a `WHERE` filter put the rule in the view text rather than in Postgres RLS.
+
+## D013: The region scope is HMAC-signed (2026-10-29, Phase 2)
+
+- **Context:** with the guide's plain `SET LOCAL app.region_ids`, SQL that slipped past the validator could call `set_config('app.region_ids', 'all', true)` and see every region. The database would not stop it.
+- **Decision:** the executor also sets `app.region_sig = HMAC-SHA256(key, region_ids | backend pid | transaction start)`. `rls.verified_scope()` recomputes it with a key in `rls.signing_key` that no query role can read. A missing, forged, widened, or replayed scope sees zero rows. The key comes from `RLS_SIGNING_KEY` and is loaded by `db-load`.
+- **Why:** "row-level security enforced by Postgres" then holds even with the validator bypassed (tested), and the design fails closed.
+- **Alternatives:** a login role per region or `SET ROLE` per request (more roles to manage; `RESET ROLE` needs the same protection); trusting the validator alone (one layer).
+
+## D014: Function allow-list plus deny-list (2026-10-29, Phase 2)
+
+- **Context:** the guide specifies a function deny-list. Postgres has hundreds of built-in functions, and a deny-list only blocks the ones someone thought of.
+- **Decision:** functions sqlglot does not model (they parse as `Anonymous`, which covers every Postgres admin, file, and config function) must be on an allow-list of analytics functions. Every function, typed or not, is also matched against a deny-list regex.
+- **Why:** an unknown function is refused by default. The cost is that a harmless but unusual function may be refused; that shows up as a validator error, never a leak, and is fixed by adding it to the list.
+- **Alternatives:** deny-list only (the guide's design).
+
+## D015: The executor runs SQL regenerated from the AST (2026-10-29, Phase 2)
+
+- **Context:** if the validator and Postgres parse the same text differently (comments, quoting), the validator can approve something other than what Postgres runs.
+- **Decision:** `ValidatedSQL.sql` is `stmt.sql(dialect="postgres", comments=False)`, and only that string is sent to the database, wrapped as `SELECT * FROM (…) AS _q LIMIT 1001`.
+- **Why:** Postgres sees exactly the tree that was validated, with no comments. All 21 must-pass queries, including the glossary SQL, run correctly after regeneration (tested for both scopes).
+- **Alternatives:** run the original text (simpler, but open to parser differentials).
+
+## D016: "Jakarta manager" = the Jabodetabek region group; cost limit 250,000 (2026-10-29, Phase 2)
+
+- **Context:** the guide's demo manager sees "Jakarta region only". The dictionary defines `region_group` as the management reporting unit. Separately, the cost guard needs a number.
+- **Decision:** the manager's scope is region IDs 1-5 (Jakarta, Bogor, Depok, Tangerang, Bekasi). The planner-cost limit is 250,000, calibrated in docs/SECURITY.md: about 8× the heaviest legitimate query (29,598), below every large cross join (317k-73M).
+- **Why:** a regional manager manages a region group, not a single city. The cost limit separates the measured legitimate and accidental queries by a wide margin.
+- **Alternatives:** Jakarta city only (region 1); a higher cost limit relying on the 5 s timeout alone.

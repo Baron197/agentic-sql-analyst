@@ -51,6 +51,7 @@ Portfolio project by Baron Purwa Hartono (AI Engineer). An agentic natural-langu
   - Web dev server: added in Phase 6.
 - Local `.env` is created from `.env.example`; Docker Desktop must be running for any `db-*` task.
 - Use `127.0.0.1`, never `localhost`, for the database host on this machine: `localhost` resolves to IPv6 first and each connection hangs ~130 s (docs/DECISIONS.md D006).
+- The `analytics` views are row-level secured (Phase 2): any connection, the admin included, sees zero rows until it applies a signed scope with `sql_analyst.safety.scope.apply_scope` in the same transaction. Query `core.*` directly as admin for raw data. The agent only ever uses `safety.executor.Executor` (role `nlq_reader`). See docs/SECURITY.md.
 
 ## When writing LLM code
 

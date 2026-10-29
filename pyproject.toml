@@ -10,6 +10,8 @@ dependencies = [
     "psycopg[binary]>=3.2",
     "faker>=37",
     "pyyaml>=6.0",
+    "sqlglot>=30.25",
+    "psycopg-pool>=3.3",
 ]
 
 [project.scripts]
