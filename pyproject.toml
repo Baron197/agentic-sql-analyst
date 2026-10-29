@@ -8,6 +8,8 @@ authors = [{ name = "Baron Purwa Hartono", email = "Baron197@users.noreply.githu
 dependencies = [
     "pydantic-settings>=2.6",
     "psycopg[binary]>=3.2",
+    "faker>=37",
+    "pyyaml>=6.0",
 ]
 
 [project.scripts]
@@ -35,6 +37,7 @@ src = ["backend/src", "backend/tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+ignore = ["E501"]  # line length is the formatter's job; long string literals are fine
 
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]
@@ -52,11 +55,19 @@ check = ["lint", "format-check", "lint-ci", "test"]
 db-up = "docker compose up -d --wait db"
 db-down = "docker compose down"
 db-ping = "python -m sql_analyst.db.ping"
+db-checksum = "python -m sql_analyst.db.checksum"
+
+[tool.poe.tasks.db-load]
+help = "Rebuild the core + analytics schemas and load the deterministic seed (any database)"
+cmd = "python -m sql_analyst.db.load"
 
 [tool.poe.tasks.db-reset]
-help = "Drop the database volume and start an empty, healthy database (Phase 1 adds schema + seed)"
-sequence = ["docker compose down -v", "docker compose up -d --wait db"]
-default_item_type = "cmd"
+help = "Start the local container if needed, then rebuild schemas and seed"
+sequence = ["db-up", "db-load"]
+
+[tool.poe.tasks.db-wipe]
+help = "Stop the container and delete its volume (all local database data)"
+cmd = "docker compose down -v"
 
 [tool.poe.tasks.ask]
 help = "Ask the agent a question (Phase 4)"

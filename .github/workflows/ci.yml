@@ -28,7 +28,7 @@ jobs:
           --health-timeout 3s
           --health-retries 30
     env:
-      POSTGRES_HOST: localhost
+      POSTGRES_HOST: 127.0.0.1
       POSTGRES_PORT: "5432"
       POSTGRES_DB: arunika
       POSTGRES_USER: postgres
@@ -39,10 +39,12 @@ jobs:
       - uses: astral-sh/setup-uv@v7
       - name: Install dependencies
         run: uv sync --locked
-      - name: Check (lint, format, workflow schema, tests)
-        run: uv run poe check
       - name: Database ping
         run: uv run poe db-ping
+      - name: Build schemas and load the seed
+        run: uv run poe db-load
+      - name: Check (lint, format, workflow schema, tests)
+        run: uv run poe check
       # Added in later phases: safety suite (2), gold-vs-gold eval sanity check (3),
       # keyless end-to-end run (4).
 

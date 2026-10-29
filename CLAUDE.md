@@ -42,11 +42,15 @@ Portfolio project by Baron Purwa Hartono (AI Engineer). An agentic natural-langu
   - `uv run poe test`: pytest only. Tests marked `db` skip if Postgres is down, unless `REQUIRE_DB=1` (set in CI).
   - `uv run poe format`: apply ruff formatting.
   - `uv run poe db-up` / `db-down`: start (waits until healthy) / stop the Postgres container.
-  - `uv run poe db-reset`: drop the volume and start a fresh database (schema + seed from Phase 1).
+  - `uv run poe db-reset`: `db-up`, then `db-load` (~15 s). The usual way to get a fresh database.
+  - `uv run poe db-load`: drop and rebuild the `core` + `analytics` schemas and load the deterministic seed into whatever database `.env` points at (CI uses this).
+  - `uv run poe db-checksum`: per-table fingerprint of the loaded data; identical on every rebuild.
+  - `uv run poe db-wipe`: stop the container and delete its volume.
   - `uv run poe db-ping`: connect and check the server version and pgvector.
   - `uv run poe ask "…"` (Phase 4) and `uv run poe eval` (Phase 3): stubs until then.
   - Web dev server: added in Phase 6.
 - Local `.env` is created from `.env.example`; Docker Desktop must be running for any `db-*` task.
+- Use `127.0.0.1`, never `localhost`, for the database host on this machine: `localhost` resolves to IPv6 first and each connection hangs ~130 s (docs/DECISIONS.md D006).
 
 ## When writing LLM code
 

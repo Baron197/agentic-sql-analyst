@@ -17,7 +17,7 @@ These are the design goals. They are not yet claimed as done: each one will link
 
 ## Status
 
-Phase 0 (scaffold) of 10. See [PROGRESS.md](PROGRESS.md).
+Phase 1 (synthetic database) of 10 done. See [PROGRESS.md](PROGRESS.md) and, for the data, [docs/DATA.md](docs/DATA.md).
 
 ## Local development
 
@@ -26,7 +26,6 @@ Requires Docker Desktop and [uv](https://docs.astral.sh/uv/).
 ```bash
 cp .env.example .env    # then set POSTGRES_PASSWORD
 uv sync
-uv run poe db-up
-uv run poe db-ping
+uv run poe db-reset     # start Postgres, build schemas, load the synthetic data (~15 s)
 uv run poe check
 ```

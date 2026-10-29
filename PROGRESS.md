@@ -7,8 +7,8 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 | Phase | Status | Notes |
 |---|---|---|
 | 0 Scaffold | **done** (2026-10-29) | all DoD items pass; see session log |
-| 1 Synthetic enterprise database | not started | next |
-| 2 Safety layer | not started | |
+| 1 Synthetic enterprise database | **done** (2026-10-29) | all DoD items pass; see session log |
+| 2 Safety layer | not started | next |
 | 3 Eval harness, golden set, baseline | not started | |
 | 4 Agent core | not started | |
 | 5 API | not started | |
@@ -34,15 +34,59 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 
 ## Open issues
 
+- CI has never run on GitHub (nothing pushed). Its db tests assume the full-scale seed, which the workflow loads with `poe db-load` before `poe check`.
 - Docker Desktop 4.80 on this machine crashed at startup because of leftover AF_UNIX socket files that Windows refuses to delete (error 1920). Workaround used on 2026-10-29: quit Docker Desktop and rename the folders aside: `%LOCALAPPDATA%\Docker\run` and `%LOCALAPPDATA%\docker-secrets-engine` (now `*.stale-20261029*`). They can be deleted after a reboot. If Docker fails to start again with "The file cannot be accessed by the system", repeat that. Quitting Docker Desktop normally (not killing it) should avoid it.
 
 ## Next step
 
-Phase 1: Synthetic enterprise database (BUILD_GUIDE §6 and §13). Start with a plan: `core` DDL, `analytics` views, deterministic seed (seed=42, Faker `id_ID`; look up real Ramadan/Lebaran dates for 2024–2026), `data/dictionary.yaml`, the planted injection row, `docs/DATA.md`, and extending `poe db-reset` to load schema + seed in under 2 minutes.
+Phase 2: Safety layer (BUILD_GUIDE §7 and §13), before any LLM code. Start with a plan covering:
+- the `nlq_reader` role (SELECT on `analytics` only, `default_transaction_read_only = on`), created so it survives `db-reset` (D011);
+- row-level security on region-scoped views keyed on `SET LOCAL app.region_ids`. Views read `core` as their owner, so RLS must be designed for views; check `security_invoker` views (PG15+) or security-barrier views filtering on `current_setting('app.region_ids')`. The region of an order is its store's region;
+- masked views if any are needed (D010);
+- the sqlglot validator using `data/dictionary.yaml` (allowed views/columns, `pii` flag, deny-listed functions);
+- the EXPLAIN cost guard, the executor (read-only transaction, 5 s timeout, outer LIMIT 1000, pool);
+- 60+ adversarial tests, including both defense-in-depth tests;
+- `docs/SECURITY.md` with a threat → layer → test table.
 
 ## Session log
 
 _(newest first: date, what was done, decisions, issues)_
+
+### 2026-10-29: Phase 1 synthetic enterprise database (done)
+
+**Built**
+- `backend/src/sql_analyst/db/`:
+  - `schema.sql`: 22 `core` tables;
+  - `constraints.sql`: 33 foreign keys, checks and indexes, added after the bulk load;
+  - `views.sql`: 22 `analytics` views with no personal data;
+  - `calendar.py`: fiscal year starting 1 April, government Ramadan/Idulfitri dates, Harbolnas;
+  - `seed/`: deterministic generator split into `reference.py`, `catalog.py`, `sales.py`, `ops.py`, `common.py`;
+  - `load.py` (COPY with timed stages) and `checksum.py`.
+- `data/dictionary.yaml`: 22 views and 161 columns, each with a description, type, EN/ID synonyms, categorical flag and examples; plus business rules, 35 join paths, and 6 glossary metrics with canonical SQL. Pydantic models and loader are in `dictionary/`; `dictionary/values.py` is the value-index source (36 categorical columns).
+- Poe tasks: `db-load`, `db-reset` (= `db-up` + `db-load`), `db-checksum`, `db-wipe`. CI now runs `db-load` before `check`.
+- Tests (35 total):
+  - unit: calendar, seed determinism across processes and hash seeds, order totals equal their lines, dictionary structure;
+  - db: row-count ranges, every declared FK validated, no orphans on any join path, dictionary equals the analytics columns and types exactly, glossary SQL runs and gives plausible values, no personal data in analytics, the injection row, the traps, value-index coverage.
+- `docs/DATA.md`: coverage, row counts, mermaid ER diagram, patterns, the traps table, and Ramadan/Idulfitri dates with sources.
+- Added faker 40.44.0 and pyyaml.
+
+**DoD evidence (2026-10-29)**
+- `db-reset` rebuilds in under 2 minutes: 17.6 s wall clock from a wiped volume (container creation included); `db-load` alone takes 8.5-8.9 s.
+- Row counts in expected ranges: `test_row_counts_in_expected_ranges` passes. 60,046 orders, 144,369 order lines, 20,000 customers, 40 stores, 12 cities, 1,496,685 rows in total.
+- FK integrity: all 33 declared foreign keys are created and validated, and there are 0 orphans along all 35 join paths.
+- Identical checksums on two rebuilds, and on a third from a wiped volume: combined sha256 `917e52ad9b2f5724c19375a8e486b0786bedabfbf3bc350986a3a6102351f938` each time.
+- 100% of analytics columns described: the dictionary matches the database exactly (161 columns, names and types), each description is at least 10 characters.
+- Every glossary SQL runs: gross sales Rp 206,481,408,300; net revenue Rp 192,701,374,149; AOV Rp 3,480,887; return rate 0.0430; active customers 3,021; conversion rate 0.0834.
+- `uv run poe check`: ruff clean, 36 files formatted, workflow schema valid, 35 passed.
+
+**Decisions:** D006-D011 in `docs/DECISIONS.md`:
+- `127.0.0.1` instead of `localhost`: the IPv6 fallback added 130 s to every connection, which first made `db-load` take 271 s;
+- 183-day inventory window;
+- pure-Python seed with per-domain string-seeded RNGs;
+- metric edge cases (refunds attributed to the order's date; active customers as of the last order date);
+- personal data omitted from analytics rather than masked;
+- `db-reset` keeps the volume, `db-wipe` deletes it.
+Also: ruff ignores E501, because line length is the formatter's job.
 
 ### 2026-10-29: Phase 0 scaffold (done)
 
