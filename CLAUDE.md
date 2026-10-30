@@ -42,7 +42,9 @@ Portfolio project by Baron Purwa Hartono (AI Engineer). An agentic natural-langu
   - `uv run poe test`: pytest only. Tests marked `db` skip if Postgres is down, unless `REQUIRE_DB=1` (set in CI).
   - `uv run poe format`: apply ruff formatting.
   - `uv run poe db-up` / `db-down`: start (waits until healthy) / stop the Postgres container.
-  - `uv run poe db-reset`: `db-up`, `db-load`, then `index-build` (~25 s). The usual way to get a fresh database.
+  - `uv run poe db-reset`: `db-up`, `db-load`, `index-build`, then `app-setup` (~25 s). The usual way to get a fresh database.
+  - `uv run poe app-setup`: create the API's `app` schema and write-only `app_writer` role, and seed the demo users from `.env` (idempotent; keeps stored runs).
+  - `uv run poe api`: run the API on http://127.0.0.1:8000 (docs at `/api/docs`). Keyless unless `LLM_PROVIDER` is a paid provider and `LIVE_MODE_ENABLED=true`.
   - `uv run poe index-build`: embed the dictionary, glossary, and few-shot examples into pgvector (schema `retrieval`) and store the categorical values. Run after `db-load`; the first run downloads the embedding model (~220 MB) into `.cache/fastembed`.
   - `uv run poe db-load`: drop and rebuild the `core` + `analytics` schemas and load the deterministic seed into whatever database `.env` points at (CI uses this).
   - `uv run poe db-checksum`: per-table fingerprint of the loaded data; identical on every rebuild.
@@ -51,6 +53,7 @@ Portfolio project by Baron Purwa Hartono (AI Engineer). An agentic natural-langu
   - `uv run poe eval --system gold|baseline|agent --mode keyless|live --split dev|test|dev,test [--repeats N] [--limit N] [--model M] [--ablation no-retrieval,no-repair,no-few-shot] [--critic]`: eval harness; results in `eval/results/`. Live mode prints a cost estimate and needs `--confirm-live` and Baron's OK first.
   - `uv run poe ask "…" [--user analyst|manager_jakarta] [--mode keyless|live --model M] [--json]`: ask the agent. Keyless (default) answers the demo questions in `data/demo.yaml`; `uv run poe ask` with no question lists them. Live mode is a paid call. Runs are saved to `runs/` (gitignored).
   - Web dev server: added in Phase 6.
+- Never print the demo passwords, `JWT_SECRET`, or other `.env` values in the chat or in docs; read them into shell variables.
 - Local `.env` is created from `.env.example`; Docker Desktop must be running for any `db-*` task.
 - Use `127.0.0.1`, never `localhost`, for the database host on this machine: `localhost` resolves to IPv6 first and each connection hangs ~130 s (docs/DECISIONS.md D006).
 - The `analytics` views are row-level secured (Phase 2): any connection, the admin included, sees zero rows until it applies a signed scope with `sql_analyst.safety.scope.apply_scope` in the same transaction. Query `core.*` directly as admin for raw data. The agent only ever uses `safety.executor.Executor` (role `nlq_reader`). See docs/SECURITY.md.

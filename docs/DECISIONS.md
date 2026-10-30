@@ -245,3 +245,39 @@ Short entries, newest last: context, decision, why, alternatives considered.
   - the demo questions go through the same leakage guard as the few-shot examples;
   - runs are appended to `runs/<date>.jsonl` (gitignored, 50 rows kept per run). Phase 5 moves them to Postgres, written by a separate role, so `nlq_reader` stays read-only.
 - **Why:** anyone can run the agent with no API key, and keyless output is labelled so it is never mistaken for model quality.
+
+## D031: The API's own schema and a write-only login (2026-10-30, Phase 5)
+
+- **Context:** the API must store users and runs, but the agent's login must stay read-only (CLAUDE.md hard rule).
+- **Decision:**
+  - schema `app` (`users`, `runs`) and role `app_writer`: `SELECT` on `app.users`, `SELECT, INSERT` on `app.runs`; no update or delete, no access to the data schemas;
+  - `poe app-setup` creates both and seeds the demo users from `.env`. It is idempotent and `db-load` doesn't touch `app`, so stored runs survive a data reload. `db-reset` runs it last;
+  - the CLI keeps the JSONL run store; the API passes its Postgres store to the agent's `finalize` node.
+- **Why:** each login can do exactly one job. A bug in the API can't change the data, and a bug in the agent can't rewrite history.
+- **Alternatives:** the admin role for the API (far too much power); runs as files (no per-user queries, lost on redeploy).
+
+## D032: Rate limits in memory, budget from stored runs (2026-10-30, Phase 5)
+
+- **Decision:**
+  - per-user question limit (10/min) and sign-in lockout (5 failures/min/email) use an in-memory sliding window per process;
+  - the daily budget sums `app.runs.cost_usd` since midnight WIB and is checked before every question;
+  - order of checks: kill switch (503), rate limit (429), budget (429).
+- **Why:** the deploy target is one container, where in-memory counts are exact and need no extra service. The budget reads the database, so it holds across restarts.
+- **Limits:** several API instances would each count separately (move the counts to Postgres or Redis then); runs in flight when the budget is reached still finish, so the cap can be overshot by one run's budget per question in flight.
+
+## D033: Sessions are JWTs in an httpOnly cookie (2026-10-30, Phase 5)
+
+- **Decision:** HS256 JWT with only `sub`, `iat`, `exp` (8 h), in an `httpOnly`, `SameSite=Lax` cookie, `Secure` behind HTTPS (`COOKIE_SECURE`). The scope is loaded from `app.users` per request. Sign-out clears the cookie (stateless: no revocation list).
+- **Why:** BUILD_GUIDE §10. Scripts can't read the token, cross-site posts don't carry it, and a changed scope applies on the next request.
+- **Alternatives:** server-side sessions (revocable, but one more table and a lookup per request; worth it only with real accounts).
+
+## D034: The kill switch is off by default (2026-10-30, Phase 5)
+
+- **Decision:** `LIVE_MODE_ENABLED=false` is the default. With a paid provider configured, `/api/ask` and `/api/ask/stream` then return 503 before any model call. Keyless mode ignores the switch.
+- **Why:** a deploy that picks up an API key by mistake still can't spend money until someone turns live mode on deliberately.
+
+## D035: Streaming with LangGraph updates and plain SSE (2026-10-30, Phase 5)
+
+- **Decision:** `Agent.stream()` uses LangGraph's `stream_mode="updates"` and yields each node's timing as the node finishes; `api/streaming.py` formats server-sent events by hand and FastAPI's `StreamingResponse` sends them. A run that ends with status `error`, or a crash mid-stream, becomes an `error` event (the HTTP status is already 200).
+- **Why:** no extra dependency (sse-starlette), and the step events arrive live rather than all at the end.
+- **Note:** the request log line for a stream is written when the headers go out; a separate "ask finished" line carries the run id and status.

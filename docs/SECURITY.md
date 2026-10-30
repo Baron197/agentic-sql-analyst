@@ -18,7 +18,7 @@ All data is synthetic (see [DATA.md](DATA.md)); this is a portfolio project buil
 | 5 | Executor: `nlq_reader` role, `READ ONLY` transaction, 5 s `statement_timeout`, connection pool | `safety/executor.py`, `db/load.py` | 2 |
 | 6 | Row-level security with a signed region scope | `db/security.sql`, `safety/scope.py` | 2 |
 | 7 | Hostile data: rows go to the model as delimited JSON with `<` `>` escaped; answers are templates filled by code | `agent/nodes/answer.py`, `agent/render.py` | 4 |
-| 8 | Budget guard on every graph edge (LLM calls, tokens, cost, wall time; repairs capped at 3); rate limit, daily spend cap, kill switch | `agent/budget.py`, `agent/graph.py`; API in Phase 5 | 4-5 |
+| 8 | Budget guard on every graph edge (LLM calls, tokens, cost, wall time; repairs capped at 3); per-user rate limit, daily spend cap, kill switch | `agent/budget.py`, `agent/graph.py`, `api/deps.py`, `api/ratelimit.py` | 4-5 |
 
 ### Layer 2: the SQL validator
 
@@ -67,7 +67,17 @@ Reference data (calendar, regions, channels, categories, products, suppliers, pr
 - **Budget.** Checked on every edge of the graph. The LLM-call limit is checked before entering a node that calls the model; tokens, cost, and wall time after each node. A stopped run ends with status `partial` and returns whatever is ready (the table, if a query ran).
 - **Retrieval index.** The `retrieval` schema holds dictionary text, few-shot examples, and categorical values (city, store, category names, and so on) for all regions. No categorical column is personal data, and the rows behind the values stay protected by row-level security. `nlq_reader` may `SELECT` from it (fixed, parameterised queries written by code); model-written SQL cannot, because the validator allows `analytics` views only.
 
-Demo scopes (users are seeded in Phase 5): `analyst@demo` = `all`; `manager.jakarta@demo` = the Jabodetabek region group (region IDs 1-5: Jakarta, Bogor, Depok, Tangerang, Bekasi).
+### The API (Phase 5)
+
+- **Sign-in.** Passwords are argon2id hashes in `app.users`. A wrong password and an unknown email get the same answer and take the same time (a dummy hash is verified). Five failed attempts per email per minute lock that email for the rest of the minute.
+- **Session.** A JWT (HS256, `JWT_SECRET`) in an `httpOnly`, `SameSite=Lax` cookie (`Secure` when `COOKIE_SECURE=true`), valid for 8 hours. It carries only the user id; the role and region scope are read from `app.users` on every request, so the browser cannot choose its scope. Sign-out clears the cookie; a copied token stays valid until it expires (no server-side revocation list).
+- **Cross-site requests.** `SameSite=Lax` keeps the cookie off cross-site POSTs, and the API accepts JSON bodies only.
+- **Run history.** `GET /api/runs` and `/api/runs/{id}` filter by the signed-in user; another user's run is a 404, the same as a missing one.
+- **Run store role.** `app_writer` can read `app.users` and insert into `app.runs`, nothing else: no update or delete, and no access to `analytics`, `core`, `rls`, or `retrieval`. `nlq_reader` stays read-only and cannot read `app`.
+- **Spend.** In front of every question: the kill switch (`LIVE_MODE_ENABLED=false` with a paid provider configured → 503), the per-user rate limit (10 per minute → 429), and the daily budget (`DAILY_BUDGET_USD`, summed over today's stored runs in WIB → 429). Questions already running when the budget is reached still finish, so the cap can be overshot by at most one run's budget ($0.05) per question in flight.
+- **Logs.** One JSON line per request (request id, path, status, latency, user id, run id). Questions, answers, passwords, cookies, and tokens are never logged.
+
+Demo scopes (users seeded by `poe app-setup`): `analyst@demo` = `all`; `manager.jakarta@demo` = the Jabodetabek region group (region IDs 1-5: Jakarta, Bogor, Depok, Tangerang, Bekasi).
 
 ## Threat model
 
@@ -96,6 +106,13 @@ Every threat maps to at least one test. Paths are relative to `backend/tests/`; 
 | The model types a figure that did not come from the query | 7 | `agent/test_graph.py::test_typed_number_is_rejected_and_the_answer_rewritten`, `agent/test_graph.py::test_second_grounding_failure_falls_back_to_the_table_only`, `agent/test_graph.py::test_assumptions_with_invented_figures_are_dropped`, `evaluation/test_harness.py::test_agent_is_scored_on_the_text_its_model_typed` |
 | Unvalidated SQL reaching the database from the agent state | 2 (validated again in `execute`) | `agent/test_nodes.py::test_execute_revalidates_and_never_runs_unvalidated_sql` |
 | Model SQL reads the retrieval index, or the agent role changes it | 2, 5 | `safety/test_validator.py::test_adversarial_sql_is_rejected`, `safety/test_defense_in_depth.py::test_reader_role_cannot_reach_core_secrets_files_or_other_roles` |
+| Using the API without signing in, or with a forged, expired, or foreign session | API auth | `api/test_auth.py::test_every_route_but_health_and_login_needs_a_session`, `api/test_auth.py::test_forged_expired_or_foreign_tokens_are_rejected` |
+| Password guessing and account probing | API auth | `api/test_auth.py::test_wrong_password_and_unknown_email_get_the_same_answer`, `api/test_auth.py::test_repeated_failures_lock_the_email_for_a_minute`, `api/test_auth.py::test_passwords_are_stored_as_argon2id_hashes` |
+| Session cookie readable by scripts or sent cross-site | API auth | `api/test_auth.py::test_login_sets_an_httponly_samesite_cookie_and_me_returns_the_scope` |
+| A manager reads another region's rows through the API (answers and the stream) | 6 | `api/test_ask.py::test_manager_sees_only_jakarta_region_stores`, `api/test_ask.py::test_stream_sends_events_in_order` |
+| Reading another user's question history | API | `api/test_runs_and_reference.py::test_runs_are_stored_and_listed_for_their_owner_only` |
+| The API's run-store login reads data or rewrites history | role design | `api/test_runs_and_reference.py::test_the_run_store_role_can_only_read_users_and_append_runs` |
+| Abuse of the public API: flooding, overspending, an emergency stop | 8 | `api/test_limits.py::test_rate_limit_per_user`, `api/test_limits.py::test_daily_budget_cap_returns_429`, `api/test_limits.py::test_kill_switch_returns_503_when_a_paid_model_is_configured`, `api/test_limits.py::test_sliding_window_limiter_forgets_old_hits` |
 | Runaway cost or loops (LLM calls, tokens, wall time, repairs) | 8 | `agent/test_nodes.py::test_budget_limits`, `agent/test_graph.py::test_llm_call_limit_stops_before_the_answer_call_and_returns_the_table`, `agent/test_graph.py::test_token_limit_stops_the_run`, `agent/test_graph.py::test_time_limit_stops_the_run_cleanly`, `agent/test_graph.py::test_repairs_are_capped_then_the_run_ends_with_an_error` |
 
 ### Threats covered in later phases
@@ -103,7 +120,7 @@ Every threat maps to at least one test. Paths are relative to `backend/tests/`; 
 | Threat | Layer | Phase |
 |---|---|---|
 | Whether a live model's answer repeats the planted injection (support ticket `TCK-2026-004660`, eval case t056) | 7 | 7 (live test-split run) |
-| Abuse of the public API (rate limit, daily spend cap, kill switch, auth) | 8 | 5 |
+| TLS, the reverse proxy, and secrets in the hosting platform | deployment | 8 |
 
 ## Cost-limit calibration (2026-10-29)
 

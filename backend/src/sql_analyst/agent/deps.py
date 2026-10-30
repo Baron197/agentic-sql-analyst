@@ -11,7 +11,7 @@ from sql_analyst.agent.budget import BudgetLimits
 from sql_analyst.dictionary.models import Dictionary
 from sql_analyst.dictionary.render import render_dictionary, render_static
 from sql_analyst.llm.base import LLMClient, LLMError, Message, T
-from sql_analyst.observability import LLMCall, RunStore
+from sql_analyst.observability import LLMCall, RunSink
 from sql_analyst.retrieval.search import Retriever
 from sql_analyst.safety.executor import QueryResult
 from sql_analyst.safety.scope import UserScope
@@ -61,7 +61,7 @@ class AgentDeps:
     dictionary: Dictionary
     retriever: Retriever | None
     config: AgentConfig = field(default_factory=AgentConfig)
-    run_store: RunStore | None = None
+    run_store: RunSink | None = None
 
     def __post_init__(self) -> None:
         if self.config.retrieval and self.retriever is None:

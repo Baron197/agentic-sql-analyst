@@ -17,17 +17,18 @@ All four are built and tested without an API key (see [docs/SECURITY.md](docs/SE
 
 ## Status
 
-Phases 0-4 of 10 done: scaffold, synthetic database, safety layer (103 adversarial validator cases plus database-level attack tests, all blocked), the evaluation harness with a 100-question golden set (40 dev / 60 test) and a single-prompt baseline, and the LangGraph agent (input guard, hybrid retrieval, SQL repair loop, result checks, template answers, budget guard). No accuracy results have been published yet: the only live runs so far are on the dev split, which is used for tuning. Test-split results with repeats come in Phase 7. See [PROGRESS.md](PROGRESS.md) and, for the data, [docs/DATA.md](docs/DATA.md).
+Phases 0-5 of 10 done: scaffold, synthetic database, safety layer (103 adversarial validator cases plus database-level attack tests, all blocked), the evaluation harness with a 100-question golden set (40 dev / 60 test) and a single-prompt baseline, the LangGraph agent (input guard, hybrid retrieval, SQL repair loop, result checks, template answers, budget guard), and the FastAPI API (cookie sign-in, ask and streaming endpoints, run history, rate limit, daily spend cap, kill switch). No accuracy results have been published yet: the only live runs so far are on the dev split, which is used for tuning. Test-split results with repeats come in Phase 7. See [PROGRESS.md](PROGRESS.md) and, for the data, [docs/DATA.md](docs/DATA.md).
 
 ## Local development
 
 Requires Docker Desktop and [uv](https://docs.astral.sh/uv/).
 
 ```bash
-cp .env.example .env    # then set POSTGRES_PASSWORD, NLQ_READER_PASSWORD, RLS_SIGNING_KEY (64 hex chars)
+cp .env.example .env    # then set the passwords and keys it lists (RLS_SIGNING_KEY: 64 hex chars)
 uv sync
 uv run poe db-reset     # start Postgres, load the synthetic data, build the retrieval index (~25 s)
 uv run poe check
 uv run poe ask          # list the keyless demo questions
 uv run poe ask "What was net revenue by sales channel in Q1 2026?" --user manager_jakarta
+uv run poe api         # http://127.0.0.1:8000/api/docs (sign in with a demo user from .env)
 ```

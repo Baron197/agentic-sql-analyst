@@ -11,7 +11,7 @@ which sends the run to budget_stop -> finalize when a limit is reached.
 
 import time
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import Any
 
 from langgraph.graph import END, START, StateGraph
@@ -104,9 +104,24 @@ class Agent:
         self.deps = deps
         self.graph = build_graph(deps)
 
-    def ask(self, question: str, user: UserScope) -> AgentResult:
-        state = AgentState(
+    def _start(self, question: str, user: UserScope) -> AgentState:
+        return AgentState(
             run_id=uuid.uuid4().hex, question=question, user=user, started=time.perf_counter()
         )
-        out = self.graph.invoke(state, config={"recursion_limit": 60})
+
+    def ask(self, question: str, user: UserScope) -> AgentResult:
+        out = self.graph.invoke(self._start(question, user), config={"recursion_limit": 60})
         return out["response"]
+
+    def stream(self, question: str, user: UserScope) -> Iterator[NodeEvent | AgentResult]:
+        """Yield each node's NodeEvent as soon as the node finishes, then the AgentResult."""
+        result: AgentResult | None = None
+        for chunk in self.graph.stream(
+            self._start(question, user), config={"recursion_limit": 60}, stream_mode="updates"
+        ):
+            for update in chunk.values():
+                yield update["trace"][-1]
+                result = update.get("response", result)
+        if result is None:  # finalize always runs; this would be a graph bug
+            raise RuntimeError("The agent finished without a result.")
+        yield result

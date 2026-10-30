@@ -18,6 +18,10 @@ dependencies = [
     "fastembed>=0.9.1",
     "rank-bm25>=0.2.2",
     "rapidfuzz>=3.14.6",
+    "fastapi>=0.162",
+    "uvicorn>=0.54",
+    "argon2-cffi>=25.1",
+    "pyjwt>=2.15",
 ]
 
 [project.scripts]
@@ -29,6 +33,7 @@ dev = [
     "pytest>=8.3",
     "poethepoet>=0.31",
     "check-jsonschema>=0.30",
+    "httpx>=0.28",
 ]
 
 [build-system]
@@ -71,8 +76,17 @@ help = "Rebuild the core + analytics schemas and load the deterministic seed (an
 cmd = "python -m sql_analyst.db.load"
 
 [tool.poe.tasks.db-reset]
-help = "Start the local container if needed, rebuild schemas and seed, then build the retrieval index"
-sequence = ["db-up", "db-load", "index-build"]
+help = "Start the local container if needed, rebuild schemas and seed, build the retrieval index, set up the API schema"
+sequence = ["db-up", "db-load", "index-build", "app-setup"]
+
+[tool.poe.tasks.app-setup]
+help = "Create the API's app schema and write-only role, and seed the demo users (keeps stored runs)"
+cmd = "python -m sql_analyst.db.app_setup"
+
+[tool.poe.tasks.api]
+help = "Run the API on http://127.0.0.1:8000 (docs at /api/docs); keyless unless LLM_PROVIDER and LIVE_MODE_ENABLED say otherwise"
+cmd = "uvicorn sql_analyst.api.main:create_app --factory --host 127.0.0.1 --port 8000"
+env = { HF_HUB_DISABLE_SYMLINKS_WARNING = "1" }
 
 [tool.poe.tasks.index-build]
 help = "Embed the dictionary, glossary, and examples into pgvector (retrieval schema); run after db-load"

@@ -36,6 +36,10 @@ jobs:
       # Throwaway values for the disposable CI database, not real secrets.
       NLQ_READER_PASSWORD: ci-only-reader-password
       RLS_SIGNING_KEY: "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
+      APP_WRITER_PASSWORD: ci-only-writer-password
+      JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-else
+      DEMO_ANALYST_PASSWORD: ci-only-analyst
+      DEMO_MANAGER_PASSWORD: ci-only-manager
       REQUIRE_DB: "1"
     steps:
       - uses: actions/checkout@v7
@@ -54,7 +58,9 @@ jobs:
           key: fastembed-${{ hashFiles('.env.example') }}
       - name: Build the retrieval index (pgvector, local embeddings)
         run: uv run poe index-build
-      - name: Check (lint, format, workflow schema, tests incl. keyless agent end to end)
+      - name: Set up the API schema, write-only role, and demo users
+        run: uv run poe app-setup
+      - name: Check (lint, format, workflow schema, tests incl. keyless agent and API end to end)
         run: uv run poe check
       - name: Eval sanity check (gold vs gold, keyless, must be 100%)
         run: uv run poe eval --system gold --split dev,test

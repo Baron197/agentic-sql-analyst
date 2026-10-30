@@ -8,7 +8,7 @@ from sql_analyst.agent.keyless import KeylessResponder
 from sql_analyst.config import Settings
 from sql_analyst.dictionary.loader import load_dictionary
 from sql_analyst.llm.factory import make_llm
-from sql_analyst.observability import RunStore
+from sql_analyst.observability import RunSink, RunStore
 from sql_analyst.retrieval.embed import Embedder, make_embedder
 from sql_analyst.retrieval.search import Retriever
 from sql_analyst.safety.executor import Executor
@@ -24,6 +24,7 @@ def build_agent(
     keyless_fallback: Literal["decline", "generic"] = "decline",
     store_runs: bool = True,
     embedder: Embedder | None = None,
+    run_store: RunSink | None = None,
 ) -> Agent:
     """provider='fake' is keyless; 'openai' or 'anthropic' are live (paid; need a key)."""
     config = config or AgentConfig(limits=AgentConfig().limits.from_settings(settings))
@@ -43,6 +44,6 @@ def build_agent(
         dictionary=dictionary,
         retriever=retriever,
         config=config,
-        run_store=RunStore(settings.runs_dir) if store_runs else None,
+        run_store=run_store or (RunStore(settings.runs_dir) if store_runs else None),
     )
     return Agent(deps)

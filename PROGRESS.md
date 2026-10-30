@@ -11,8 +11,8 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 | 2 Safety layer | **done** (2026-10-29) | all DoD items pass; see session log |
 | 3 Eval harness, golden set, baseline | **done** (2026-10-30) | all DoD items pass; see session log |
 | 4 Agent core | **done** (2026-10-30) | all DoD items pass; see session log |
-| 5 API | not started | next |
-| 6 Web app | not started | |
+| 5 API | **done** (2026-10-30) | all DoD items pass; see session log |
+| 6 Web app | not started | next |
 | 7 Real-mode evaluation | not started | needs Baron's budget OK |
 | 8 Deploy | not started | |
 | 9 Portfolio packaging | not started | |
@@ -35,7 +35,8 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 ## Open issues
 
 - CI has never run on GitHub (nothing pushed). Its db tests assume the full-scale seed, which the workflow loads with `poe db-load` before `poe check`; the workflow sets throwaway `NLQ_READER_PASSWORD` and `RLS_SIGNING_KEY` values.
-- Layer 8's API half (rate limit, daily spend cap, kill switch) belongs to Phase 5. Layers 1, 7, and the agent budget guard are built (Phase 4).
+- Rate limits live in memory in one API process (D032): fine for one container, not for several instances.
+- Sessions are stateless JWTs: sign-out clears the cookie, but a copied token stays valid until it expires (8 h, D033).
 - The function allow-list (D014) may refuse a legitimate function the agent needs; watch for `forbidden_function` errors in the Phase 3/4 eval and add functions deliberately.
 - Gold SQL is Claude's reading of each question. Baron should spot-check the ambiguous and metric-definition cases before any test-split number is quoted.
 - Whether a live model's answer repeats the planted injection (t056) is not scored automatically (D020). Templates make typed figures impossible, but template prose is still model text; check t056 in the Phase 7 live test-split run.
@@ -44,16 +45,123 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 
 ## Next step
 
-Phase 5: API (BUILD_GUIDE §10 and §13), only when Baron says so. Start with a plan covering:
-- FastAPI app: auth (argon2 hashes, JWT in an httpOnly cookie, seeded demo users `analyst@demo` / `manager.jakarta@demo`, passwords from `.env`), `POST /api/ask`, `POST /api/ask/stream` (SSE events step, sql, rows, answer, done / error), `GET /api/runs`, `/api/runs/{id}`, `/api/schema`, `/api/examples`, `/api/health`, `/api/metrics`;
-- the run store moves from JSONL to Postgres, written by a separate role so `nlq_reader` stays read-only (D030);
-- limits: 10 questions/min per user, `DAILY_BUDGET_USD` (429), kill switch `LIVE_MODE_ENABLED=false` (503); JSON structured logs with `run_id`; OpenAPI docs;
-- DoD tests: auth required and wrong password rejected; the manager sees only Jakarta; stream event order; rate limit, budget cap, kill switch.
-- Worth doing early in Phase 5 or 7 (from the Phase 4 live run): look at why the agent costs about twice the baseline (cache writes) and whether the d019, d027, d029 gold expectations are right (Baron's spot-check).
+Phase 6: Web app (BUILD_GUIDE §11 and §13), only when Baron says so. Start with a plan covering:
+- React + TypeScript + Vite + Tailwind + Recharts in `web/`; pages Login (shows demo credentials only on the public demo, Phase 8), Ask, History, Data dictionary, About (how it works, the four guarantees, the fictional-data notice);
+- the Ask page: example questions from `/api/examples`, a live step timeline from `/api/ask/stream` (fetch + ReadableStream, since EventSource can't POST), the answer card with assumption badges and "numbers filled from the query result", the SQL panel, a sortable paginated table with CSV download, the auto chart (the API already sends one: kpi / bar / line / table), and run details;
+- dev server proxying `/api` to `poe api` (same origin, so the cookie works without CORS); dark theme; 375 px and 1280 px; keyboard access; Vitest + one Playwright smoke test; CI web job (lint, typecheck, test, build).
+- Still open from Phase 4: why the agent costs about twice the baseline, and Baron's spot-check of the d019, d027, d029 gold answers.
 
 ## Session log
 
 _(newest first: date, what was done, decisions, issues)_
+
+### 2026-10-30: Phase 5 API (completed)
+
+**Built**
+- `api/`: `main.py` (app factory; executor, agent, and run store built once at startup; OpenAPI at `/api/docs`), `auth.py` (argon2id, JWT in an httpOnly SameSite=Lax cookie, scope loaded per request), `routes/` (auth, ask, runs, reference, ops), `streaming.py` (SSE: step…, sql, rows, answer, done / error), `deps.py` (kill switch → rate limit → budget), `ratelimit.py`, `store.py` (Postgres run store, spend, metrics), `logs.py` (JSON request logs; no question text or secrets), `models.py`.
+- `Agent.stream()` (LangGraph `stream_mode="updates"`); a `RunSink` protocol so the CLI keeps JSONL and the API writes Postgres.
+- `db/app.sql` + `db/app_setup.py` (`poe app-setup`): schema `app`, role `app_writer` (read users, append runs; nothing else), demo users seeded from `.env`. `db-reset` now runs it; `poe api` starts uvicorn.
+- New settings and `.env.example` names: `APP_WRITER_PASSWORD`, `JWT_SECRET`, `DEMO_ANALYST_PASSWORD`, `DEMO_MANAGER_PASSWORD`, `SESSION_HOURS`, `COOKIE_SECURE`, `RATE_LIMIT_PER_MINUTE`, `DAILY_BUDGET_USD` (1.00), `LIVE_MODE_ENABLED` (false). Local values were generated into `.env` and never printed.
+- CI: throwaway values for the new secrets and an `app-setup` step before the tests.
+
+**Decisions:** D031 (app schema, write-only role), D032 (rate limits in memory; budget from stored runs), D033 (JWT cookie sessions), D034 (kill switch off by default), D035 (LangGraph updates + plain SSE). SECURITY.md has the API section and nine new threat rows mapped to tests.
+
+**DoD evidence:** `REQUIRE_DB=1 uv run poe check`: 726 passed (684 before; 42 API tests in `backend/tests/api/`), lint, format, and workflow schema clean. Covered:
+- auth required on every route but health and login, and wrong passwords rejected (same answer for an unknown email; lockout after 5 failures; forged, expired, unknown-user, and no-expiry tokens rejected): `test_auth.py`;
+- RLS through the API: the Jakarta manager's answer and stream rows contain only Jabodetabek stores (20 vs the analyst's 39): `test_ask.py`;
+- streaming event order: step × 9, sql, rows, answer, done; a refusal sends no sql/rows; a crash becomes an `error` event: `test_ask.py`;
+- rate limit (429 with Retry-After, per user, shared by both ask routes), budget cap (429 with a seeded $5 run today), kill switch (503 with a live provider and `LIVE_MODE_ENABLED=false`, no model call made): `test_limits.py`;
+- own runs only (another user's run is a 404), the run-store role cannot read data or change history, `app-setup` is idempotent: `test_runs_and_reference.py`.
+- Test runs are deleted from `app.runs` after the session.
+
+**Curl walkthrough** (`uv run poe api`, keyless mode; the password comes from `.env` and is not shown):
+
+```
+$ curl -s http://127.0.0.1:8000/api/health
+{"status":"ok","database":true,"run_store":true,"mode":"keyless","live_mode_enabled":false}
+
+$ curl -s -o /dev/null -w 'HTTP %{http_code}\n' -X POST http://127.0.0.1:8000/api/ask -H 'Content-Type: application/json' -d '{"question":"How many orders?"}'
+HTTP 401
+
+
+$ curl -s -w '  HTTP %{http_code}\n' -X POST http://127.0.0.1:8000/api/auth/login -H 'Content-Type: application/json' -d '{"email":"manager.jakarta@demo","password":"wrong"}'
+{"detail":{"code":"bad_credentials","message":"Wrong email or password."}}  HTTP 401
+
+
+$ curl -s -c cookies.txt -X POST http://127.0.0.1:8000/api/auth/login -H 'Content-Type: application/json' -d '{"email":"manager.jakarta@demo","password":"'"$DEMO_MANAGER_PASSWORD"'"}'
+{"user_id":"manager.jakarta@demo","display_name":"Demo manager (Jakarta)","role":"manager","region_ids":[1,2,3,4,5]}
+
+$ curl -s -b "cookies.txt" -X POST http://127.0.0.1:8000/api/ask -H 'Content-Type: application/json' -d '{"question":"How many orders did each store get in September 2026?"}' | uv run python -c "import json,sys; d=json.load(sys.stdin); print(json.dumps({k: d[k] for k in ('status','answer','row_count','assumptions','usage')}, indent=1)); print('first rows:', d['rows'][:3])"
+{
+ "status": "answered",
+ "answer": "In September 2026, Arunika Jakarta Senayan received the most orders (78). The 20 stores you can see received 1,046 orders in total.",
+ "row_count": 20,
+ "assumptions": [
+  "Counts all orders placed in September 2026 (WIB), including cancelled ones."
+ ],
+ "usage": {
+  "model": "fake-keyless",
+  "keyless": true,
+  "llm_calls": 2,
+  "input_tokens": 5178,
+  "cache_read_tokens": 0,
+  "output_tokens": 171,
+  "cost_usd": 0.0,
+  "latency_ms": 1551.9,
+  "repairs": 0
+ }
+}
+first rows: [['Arunika Jakarta Senayan', 78], ['Arunika Bogor Pajajaran', 68], ['Arunika Jakarta Cempaka Putih', 57]]
+
+
+$ curl -s -N -b "cookies.txt" -X POST http://127.0.0.1:8000/api/ask/stream -H 'Content-Type: application/json' -d '{"question":"Metode pembayaran apa yang paling sering dipakai pada tahun 2026?"}' | cut -c1-150
+event: step
+data: {"node":"guard_input","status":"done","ms":0.0,"note":null}
+
+event: step
+data: {"node":"retrieve_context","status":"done","ms":19.8,"note":"9 views, 0 values, 4 examples"}
+
+event: step
+data: {"node":"generate_sql","status":"done","ms":0.4,"note":"confidence high"}
+
+event: step
+data: {"node":"validate_sql","status":"done","ms":2.4,"note":"fact_payments"}
+
+event: step
+data: {"node":"execute","status":"done","ms":49.9,"note":"6 rows, cost 2,190"}
+
+event: step
+data: {"node":"check_result","status":"done","ms":0.0,"note":"ok"}
+
+event: step
+data: {"node":"write_answer","status":"done","ms":0.1,"note":null}
+
+event: step
+data: {"node":"render_numbers","status":"done","ms":0.1,"note":"grounded"}
+
+event: step
+data: {"node":"finalize","status":"done","ms":3.0,"note":"answered"}
+
+event: sql
+data: {"sql":"SELECT p.payment_method, COUNT(*) AS payments FROM analytics.fact_payments AS p WHERE CAST((p.paid_at AT TIME ZONE 'Asia/Jakarta') AS DA
+
+event: rows
+data: {"columns":["payment_method","payments"],"rows":[["ewallet",2354],["card",1946],["qris",1934],["cash",1224],["bank_transfer",919],["cod",665]],"
+
+event: answer
+data: {"status":"answered","text":"Pada tahun 2026, metode yang paling sering dipakai adalah ewallet (2.354 pembayaran), diikuti card (1.946).","assum
+
+event: done
+data: {"run_id":"9aca37ecf548491b86016fb8473a4286","usage":{"model":"fake-keyless","keyless":true,"llm_calls":2,"input_tokens":5671,"cache_read_tokens
+
+
+
+$ curl -s -b "cookies.txt" 'http://127.0.0.1:8000/api/runs?limit=2'
+{"runs":[{"run_id":"9aca37ecf548491b86016fb8473a4286","created_at":"2026-10-30T05:06:32.625627Z","status":"answered","question":"Metode pembayaran apa yang paling sering dipakai pada tahun 2026?","model":"fake-keyless","keyless":true,"cost_usd":0.0,"elapsed_ms":82.0},{"run_id":"708e440771744ab5b07286df2b09c13e","created_at":"2026-10-30T05:06:32.446604Z","status":"answered","question":"How many orders did each store get in September 2026?","model":"fake-keyless","keyless":true,"cost_usd":0.0,"elapsed_ms":1551.9}]}
+
+$ curl -s -b "cookies.txt" http://127.0.0.1:8000/api/metrics
+{"runs":4,"failed_runs":0,"latency_p50_ms":819.4,"latency_p95_ms":1714.1,"cost_today_usd":0.0,"runs_today":4,"cache_read_tokens":0,"keyless_runs":4,"error_rate":0.0,"cache_hit_rate":0.0,"daily_budget_usd":1.0,"mode":"keyless"}
+```
 
 ### 2026-10-30: Phase 4 completed (live agent-vs-baseline run on dev)
 

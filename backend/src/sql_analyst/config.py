@@ -7,6 +7,7 @@ from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 READER_ROLE = "nlq_reader"
+WRITER_ROLE = "app_writer"
 
 
 class Settings(BaseSettings):
@@ -45,6 +46,17 @@ class Settings(BaseSettings):
     embedding_cache_dir: str = ".cache/fastembed"
     runs_dir: str = "runs"
 
+    # API (Phase 5): sign-in, the run store's write-only login, and the spend controls.
+    app_writer_password: SecretStr = SecretStr("")
+    jwt_secret: SecretStr = SecretStr("")  # at least 32 characters
+    demo_analyst_password: SecretStr = SecretStr("")
+    demo_manager_password: SecretStr = SecretStr("")
+    session_hours: int = 8
+    cookie_secure: bool = False  # True when served over HTTPS
+    rate_limit_per_minute: int = 10  # questions per user
+    daily_budget_usd: float = 1.0  # live spend per day (WIB), all users together
+    live_mode_enabled: bool = False  # kill switch for paid model calls
+
     def admin_conninfo(self) -> str:
         """Connection string for the owner role (schema setup and seeding only, never the agent)."""
         return make_conninfo(
@@ -64,6 +76,22 @@ class Settings(BaseSettings):
             user=READER_ROLE,
             password=self.nlq_reader_password.get_secret_value(),
         )
+
+    def writer_conninfo(self) -> str:
+        """Connection string for the API's run store (schema app only; no analytics access)."""
+        return make_conninfo(
+            host=self.postgres_host,
+            port=self.postgres_port,
+            dbname=self.postgres_db,
+            user=WRITER_ROLE,
+            password=self.app_writer_password.get_secret_value(),
+        )
+
+    def jwt_key(self) -> str:
+        key = self.jwt_secret.get_secret_value()
+        if len(key) < 32:
+            raise ValueError("JWT_SECRET must be at least 32 characters")
+        return key
 
     def signing_key(self) -> bytes:
         key = bytes.fromhex(self.rls_signing_key.get_secret_value())

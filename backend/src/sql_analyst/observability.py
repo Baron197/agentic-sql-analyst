@@ -1,7 +1,7 @@
 """Run traces (per-node timings, per-call tokens and cost) and the run store.
 
-Phase 4 stores runs as JSONL under RUNS_DIR (gitignored), one file per day. Phase 5 moves
-them to Postgres behind `GET /api/runs`, written by a separate role so the agent's
+The CLI stores runs as JSONL under RUNS_DIR (gitignored), one file per day. The API stores
+them in Postgres (`app.runs`, api/store.py), written by a separate role so the agent's
 database login stays read-only.
 """
 
@@ -9,7 +9,7 @@ import json
 from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from pydantic import BaseModel
 
@@ -60,6 +60,12 @@ def totals(calls: Iterable[LLMCall]) -> UsageTotals:
         t.llm_latency_ms = round(t.llm_latency_ms + u.latency_ms, 1)
         t.keyless = t.keyless and u.keyless
     return t
+
+
+class RunSink(Protocol):
+    """Where finalize saves a run: JSONL here (CLI), Postgres in the API (api/store.py)."""
+
+    def save(self, record: dict[str, Any]) -> Any: ...
 
 
 class RunStore:
