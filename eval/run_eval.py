@@ -24,7 +24,14 @@ from pydantic import BaseModel
 from eval.agent import AgentSystem
 from eval.baseline import BaselineSystem, keyless_responder
 from eval.cases import AS_OF_DATE, EvalCase, load_cases
-from eval.metrics import mean_std, percentile, rate, results_match, typed_numbers
+from eval.metrics import (
+    mean_std,
+    percentile,
+    rate,
+    results_match,
+    results_match_relabeled,
+    typed_numbers,
+)
 from eval.systems import GoldSystem, Prediction, System
 from sql_analyst.agent.budget import BudgetLimits
 from sql_analyst.agent.deps import AgentConfig
@@ -54,6 +61,7 @@ class CaseScore(BaseModel):
     decision: str
     ex_strict: bool | None = None
     ex_lenient: bool | None = None
+    ex_relabeled: bool | None = None  # lenient + one-to-one renamed labels (D039)
     valid_sql: bool | None = None
     refused_correctly: bool | None = None
     assumption_stated: bool | None = None
@@ -100,6 +108,10 @@ def score_case(
             match
             and results_match(gold_rows, pred.rows, order_matters=case.order_matters, strict=False)
         )
+        s.ex_relabeled = bool(
+            match
+            and results_match_relabeled(gold_rows, pred.rows, order_matters=case.order_matters)
+        )
         if case.expected == "state_assumption":
             s.assumption_stated = bool(pred.assumptions)
     else:
@@ -128,6 +140,11 @@ def summarize(scores: list[CaseScore]) -> dict[str, Any]:
         "n_cases": len(scores),
         "ex_strict": rate([bool(s.ex_strict) for s in answerable]),
         "ex_lenient": rate([bool(s.ex_lenient) for s in answerable]),
+        "ex_relabeled": rate([bool(s.ex_relabeled) for s in answerable]),
+        # Pass only because a label was renamed: a human checks the labels mean the same.
+        "relabeled_only": sorted(
+            s.case_id for s in answerable if s.ex_relabeled and not s.ex_lenient
+        ),
         "valid_sql_rate": rate([bool(s.valid_sql) for s in answerable]),
         "repair_rate": rate([s.repairs > 0 for s in answerable if s.repairs is not None]),
         "false_refusal_rate": rate([s.decision.startswith("refuse") for s in answerable]),
@@ -155,7 +172,7 @@ def summarize(scores: list[CaseScore]) -> dict[str, Any]:
 
 
 AGGREGATED = [
-    "ex_strict", "ex_lenient", "valid_sql_rate", "repair_rate", "false_refusal_rate", "refusal_accuracy",
+    "ex_strict", "ex_lenient", "ex_relabeled", "valid_sql_rate", "repair_rate", "false_refusal_rate", "refusal_accuracy",
     "unsafe_refusal_rate", "safety_block_rate", "assumption_rate", "grounding_violations",
     "latency_p50_ms", "latency_p95_ms", "cost_per_question_usd", "total_cost_usd",
 ]  # fmt: skip
@@ -316,6 +333,17 @@ def render_markdown(
     gates = meta["gates"]
     lines += ["", "## Gates", ""]
     lines += [f"- {name}: **{'PASS' if ok else 'FAIL'}**" for name, ok in gates.items()]
+    relabeled_only = sorted({c for rep in per_repeat for c in rep["relabeled_only"]})
+    if relabeled_only:
+        lines += [
+            "",
+            "## Passing only with renamed labels (check by hand)",
+            "",
+            "These cases match every number but use different labels from the gold "
+            "(`ex_relabeled`, D039). Confirm the labels mean the same: "
+            + ", ".join(f"`{c}`" for c in relabeled_only)
+            + ".",
+        ]
     lines += ["", "## EX (lenient) by category, first repeat", "", "| Category | EX |", "|---|---|"]
     for cat, v in per_repeat[0]["ex_lenient_by_category"].items():
         lines.append(f"| {cat} | {v} |")
@@ -323,13 +351,13 @@ def render_markdown(
         "",
         "## Cases, first repeat",
         "",
-        "| Case | Category | Expected | Decision | EX strict | EX lenient | Error |",
-        "|---|---|---|---|---|---|---|",
+        "| Case | Category | Expected | Decision | EX strict | EX lenient | EX relabeled | Error |",
+        "|---|---|---|---|---|---|---|---|",
     ]
     for s in scores:
         if s.repeat == 0:
             lines.append(
-                f"| {s.case_id} | {s.category} | {s.expected} | {s.decision} | {_mark(s.ex_strict)} | {_mark(s.ex_lenient)} | {s.error_code or ''} |"
+                f"| {s.case_id} | {s.category} | {s.expected} | {s.decision} | {_mark(s.ex_strict)} | {_mark(s.ex_lenient)} | {_mark(s.ex_relabeled)} | {s.error_code or ''} |"
             )
     return "\n".join(lines) + "\n"
 
@@ -419,7 +447,7 @@ def main(argv: list[str] | None = None) -> int:
     }  # fmt: skip
     json_path, md_path = write_reports(meta, per_repeat, aggregate, scores)
     print(f"\n{label}")
-    for k in ("ex_strict", "ex_lenient", "valid_sql_rate", "refusal_accuracy", "unsafe_refusal_rate",
+    for k in ("ex_strict", "ex_lenient", "ex_relabeled", "valid_sql_rate", "refusal_accuracy", "unsafe_refusal_rate",
               "safety_block_rate", "grounding_violations", "latency_p50_ms", "total_cost_usd"):  # fmt: skip
         print(
             f"  {k:<22} {aggregate[k]['mean']}"

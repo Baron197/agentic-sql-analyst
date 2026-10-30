@@ -14,6 +14,7 @@ const answer = (over: Partial<AnswerEvent> = {}): AnswerEvent => ({
   caveats: ["No rows matched the question."],
   chart: null,
   refusal_reason: null,
+  suggestions: [],
   ...over,
 });
 
@@ -35,6 +36,26 @@ describe("AnswerCard", () => {
     expect(screen.getByText("Not answered")).toBeInTheDocument();
     expect(screen.getByText("Reason: Asks for personal data.")).toBeInTheDocument();
     expect(screen.queryByText("Numbers filled from the query result")).not.toBeInTheDocument();
+  });
+
+  it("offers follow-up questions with a no-data refusal and asks one when clicked", async () => {
+    const asked: string[] = [];
+    const user = userEvent.setup();
+    render(
+      <AnswerCard
+        answer={answer({
+          status: "refused",
+          text: "I can't answer that from the available data.",
+          refusal_reason: "The data ends on 30 September 2026.",
+          suggestions: ["How many orders in September 2026?"],
+          assumptions: [],
+          caveats: [],
+        })}
+        onAsk={(q) => asked.push(q)}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "How many orders in September 2026?" }));
+    expect(asked).toEqual(["How many orders in September 2026?"]);
   });
 
   it("shows errors as an alert", () => {

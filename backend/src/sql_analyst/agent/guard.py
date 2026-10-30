@@ -65,7 +65,8 @@ _RULES: list[tuple[str, RefusalKind, re.Pattern[str], str]] = [
         re.compile(
             r"\b(e-?mail|email|phone|mobile|telephone|whatsapp|wa)\s+(address(es)?|numbers?|no\.?)\b"
             r"|\b(full|first|last|customer|customers'?|employee|staff)\s+names?\b"
-            r"|\bnames?\s+of\s+(the\s+|our\s+|all\s+)?(customers?|employees?|staff|buyers?)\b"
+            r"|\b(names?|e-?mails?|phones?|phone\s+numbers?|addresses|address)\s+of\s+"
+            r"(the\s+|our\s+|all\s+|every\s+|each\s+)?(customers?|employees?|staff|buyers?|users?)\b"
             r"|\b(home|street|mailing|postal|delivery|shipping)\s+address(es)?\b"
             r"|\b(salary|salaries|wages?|payroll|passwords?|date of birth|birth ?dates?|"
             r"national id|credit card|card numbers?)\b"

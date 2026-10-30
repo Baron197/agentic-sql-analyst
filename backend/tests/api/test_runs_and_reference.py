@@ -32,7 +32,7 @@ def test_schema_and_examples(client):
     assert schema["fictional"] and len(schema["views"]) == 22
     assert schema["your_scope"] == {"role": "manager", "region_ids": [1, 2, 3, 4, 5]}
     examples = client.get("/api/examples").json()
-    assert examples["keyless"] and len(examples["examples"]) == 8
+    assert examples["keyless"] and len(examples["examples"]) == 9
 
 
 def test_metrics(client):

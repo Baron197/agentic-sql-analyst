@@ -59,6 +59,7 @@ export interface AnswerEvent {
   caveats: string[];
   chart: Chart | null;
   refusal_reason: string | null;
+  suggestions: string[]; // follow-up questions offered with an "unanswerable" refusal
 }
 
 export interface DoneEvent {
@@ -104,6 +105,7 @@ export interface RunRecord {
   assumptions: string[];
   caveats: string[];
   refusal: { kind: string; reason: string; source: string } | null;
+  suggestions?: string[]; // absent in runs stored before the field existed
   repairs: number;
   model: string;
   trace: { node: string; ms: number; note: string | null }[];

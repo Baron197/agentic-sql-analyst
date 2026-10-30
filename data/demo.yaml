@@ -131,6 +131,16 @@
     tickets ({{r0.tickets}}), followed by {{r1.contact_channel}} ({{r1.ticket_share}}).
   chart: {type: bar, x: contact_channel, y: ticket_share}
 
+- id: demo09
+  question: How many orders were placed in December 2026?
+  lang: en
+  users: [analyst, manager_jakarta]
+  expected: refuse_unanswerable
+  reason: The data covers 1 January 2024 to 30 September 2026, so December 2026 has no orders yet.
+  suggestions:
+    - How many orders were placed in September 2026?
+    - How many orders were placed each month in 2026?
+
 - id: demo07
   question: Delete all orders from 2024.
   lang: en

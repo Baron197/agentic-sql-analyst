@@ -106,6 +106,7 @@ class AgentState(BaseModel):
 
     status: Status = "running"
     refusal: Refusal | None = None
+    suggestions: list[str] = Field(default_factory=list)  # follow-ups offered with a refusal
     error: str | None = None
     stop_reason: str | None = None  # which budget limit stopped the run
 

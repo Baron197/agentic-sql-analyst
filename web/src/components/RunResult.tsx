@@ -7,12 +7,12 @@ import { SqlPanel } from "./SqlPanel";
 import { StepTimeline } from "./StepTimeline";
 
 /** Everything about one run: answer, chart, SQL, rows, steps, and usage. */
-export function RunResult({ run }: { run: RunView }) {
+export function RunResult({ run, onAsk }: { run: RunView; onAsk?: (question: string) => void }) {
   const running = run.phase === "running";
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="min-w-0 space-y-5">
-        <AnswerCard answer={run.answer} error={run.error} />
+        <AnswerCard answer={run.answer} error={run.error} onAsk={onAsk} />
         {run.answer && <AutoChart chart={run.answer.chart} result={run.rows} />}
         {run.sql && <SqlPanel sql={run.sql} />}
         {run.rows && (

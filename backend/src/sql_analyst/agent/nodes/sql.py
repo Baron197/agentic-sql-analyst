@@ -1,8 +1,10 @@
 """generate_sql, validate_sql, execute, and the repair rule they share."""
 
+import re
 from typing import Any
 
 from sql_analyst.agent.deps import AgentDeps, call_llm
+from sql_analyst.agent.guard import check_question
 from sql_analyst.agent.nodes.retrieve import render_context
 from sql_analyst.agent.schemas import SQLDraft
 from sql_analyst.agent.state import AgentState, Refusal, ResultTable, SQLAttempt
@@ -45,6 +47,32 @@ def fail(
     }
 
 
+MAX_SUGGESTIONS = 3
+_YEAR = re.compile(r"\b(19|20)\d{2}\b")
+
+
+def clean_suggestions(raw: list[str], deps: AgentDeps) -> list[str]:
+    """Follow-up questions offered with a refusal (docs/DECISIONS.md D040).
+
+    They are model text shown as clickable questions. Kept only if short, safe to ask (the
+    input guard passes them), and any year they name is inside the data window. No query
+    ran, so they cannot quote a result.
+    """
+    window = deps.dictionary.data_window
+    years = set(range(window.start.year, window.end.year + 1))
+    out: list[str] = []
+    for raw_text in raw:
+        s = " ".join(raw_text.split())
+        if not s or len(s) > 200 or s in out or check_question(s) is not None:
+            continue
+        if any(int(m.group(0)) not in years for m in _YEAR.finditer(s)):
+            continue
+        out.append(s)
+        if len(out) == MAX_SUGGESTIONS:
+            break
+    return out
+
+
 def _user_message(state: AgentState, deps: AgentDeps) -> str:
     scope = state.user
     access = (
@@ -84,8 +112,10 @@ def generate_sql(state: AgentState, deps: AgentDeps) -> dict[str, Any]:
         }
     if draft.decision != "answer":
         kind = "unsafe" if draft.decision == "refuse_unsafe" else "unanswerable"
+        suggestions = clean_suggestions(draft.suggestions, deps) if kind == "unanswerable" else []
         return update | {
             "refusal": Refusal(kind=kind, reason=draft.reason or draft.decision, source="model"),
+            "suggestions": suggestions,
             "status": "refused",
             "goto": "refuse",
             "_note": draft.decision,

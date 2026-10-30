@@ -36,6 +36,10 @@ def test_demo_question_runs_end_to_end(agent, demo, user):
     if demo.expected == "refuse_unsafe":
         assert r.status == "refused" and r.refusal.kind == "unsafe" and r.sql is None
         return
+    if demo.expected == "refuse_unanswerable":
+        assert r.status == "refused" and r.refusal.kind == "unanswerable" and r.sql is None
+        assert r.suggestions == demo.suggestions and r.refusal.reason == demo.reason
+        return
     assert r.status == "answered", (r.error, r.trace)
     assert r.row_count > 0 and not r.truncated and r.repairs == 0
     assert "{{" not in r.answer and not r.answer_fallback

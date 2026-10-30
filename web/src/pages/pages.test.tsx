@@ -87,6 +87,7 @@ describe("AskPage", () => {
               caveats: [],
               chart: { type: "bar", x: "channel_name", y: "orders" },
               refusal_reason: null,
+              suggestions: [],
             },
           ],
           ["done", { run_id: "run-1", usage: USAGE }],

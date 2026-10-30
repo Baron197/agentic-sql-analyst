@@ -27,6 +27,12 @@ class SQLDraft(BaseModel):
         default="medium", description="How sure you are that the query answers the question"
     )
     reason: str | None = Field(default=None, description="Short reason when refusing")
+    suggestions: list[str] = Field(
+        default_factory=list,
+        description="Only with refuse_unanswerable: up to 3 short questions, in the language of "
+        "the question, that the data can answer and that are close to what the user asked "
+        "(for example the latest period that has data)",
+    )
 
 
 class ChartSpec(BaseModel):

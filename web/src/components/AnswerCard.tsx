@@ -10,9 +10,11 @@ const STATUS: Record<string, { label: string; tone: string }> = {
 export function AnswerCard({
   answer,
   error,
+  onAsk,
 }: {
   answer: AnswerEvent | null;
   error?: ErrorEvent | null;
+  onAsk?: (question: string) => void; // makes suggested questions clickable
 }) {
   if (error) {
     return (
@@ -51,6 +53,28 @@ export function AnswerCard({
       <p className="text-[17px] leading-relaxed text-ink">{answer.text}</p>
       {answer.refusal_reason && answer.status === "refused" && (
         <p className="mt-2 text-sm text-ink-mute">Reason: {answer.refusal_reason}</p>
+      )}
+      {answer.suggestions.length > 0 && (
+        <div className="mt-4">
+          <h3 className="label mb-2 font-sans">You could ask instead</h3>
+          <ul className="flex flex-wrap gap-2">
+            {answer.suggestions.map((q) => (
+              <li key={q}>
+                {onAsk ? (
+                  <button
+                    type="button"
+                    onClick={() => onAsk(q)}
+                    className="rounded-2xl border border-accent/30 px-3 py-1.5 text-left text-sm text-accent-soft transition-colors hover:border-accent hover:text-ink sm:rounded-full"
+                  >
+                    {q}
+                  </button>
+                ) : (
+                  <span className="chip">{q}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
       {answer.assumptions.length > 0 && (
         <div className="mt-4">

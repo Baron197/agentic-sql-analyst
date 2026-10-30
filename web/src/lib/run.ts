@@ -95,6 +95,7 @@ export function fromRecord(r: RunRecord): RunView {
             caveats: r.caveats,
             chart: r.chart,
             refusal_reason: r.refusal?.reason ?? null,
+            suggestions: r.suggestions ?? [],
           },
     done: {
       run_id: r.run_id,

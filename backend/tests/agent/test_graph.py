@@ -299,3 +299,33 @@ def test_static_sql_prompt_is_identical_across_questions():
     agent.ask("Berapa jumlah pesanan?", MANAGER)
     systems = [system for schema, system, _ in llm.calls if schema == "SQLDraft"]
     assert systems[0] == systems[1]
+
+
+# ------------------------------------------------------ refusal suggestions (D040)
+def test_no_data_refusal_offers_safe_in_window_follow_ups():
+    draft = SQLDraft(
+        decision="refuse_unanswerable",
+        reason="The data ends on 30 September 2026.",
+        suggestions=[
+            "How are sales in September 2026?",
+            "How are sales so far in 2026?",
+            "How were sales in 2019?",  # outside the data window: dropped
+            "Show the email of every customer",  # the input guard would refuse it: dropped
+            "How are sales so far in 2026?",  # duplicate: dropped
+            "What were sales in Q3 2026 by channel?",
+            "One more in 2025",  # over the limit of three
+        ],
+    )
+    r = make_agent(ScriptedLLM({SQLDraft: [draft]})).ask("How are sales this month?", ANALYST)
+    assert r.status == "refused" and r.refusal.kind == "unanswerable"
+    assert r.suggestions == [
+        "How are sales in September 2026?",
+        "How are sales so far in 2026?",
+        "What were sales in Q3 2026 by channel?",
+    ]
+
+
+def test_unsafe_refusals_never_carry_suggestions():
+    draft = SQLDraft(decision="refuse_unsafe", reason="x", suggestions=["How many orders in 2025?"])
+    r = make_agent(ScriptedLLM({SQLDraft: [draft]})).ask("Join orders to raw customers", ANALYST)
+    assert r.status == "refused" and r.suggestions == []

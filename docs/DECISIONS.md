@@ -301,3 +301,23 @@ Short entries, newest last: context, decision, why, alternatives considered.
   - the table shows raw values with thousands separators (ids and years unchanged); the answer text keeps the agent's locale formatting; CSV keeps raw values, and cells starting with `=`, `+`, `-`, or `@` get a leading `'` so spreadsheets don't run them as formulas (result rows can contain untrusted text);
   - the stream is read with `fetch` and a small SSE parser (EventSource can't POST); the dev server proxies `/api`, so the app and the API share an origin and the cookie works without CORS. Steps arrive one by one through the proxy (checked: the first step at 128 ms, the next at 1,654 ms while the embedding model loaded);
   - dark theme only, with the colours and fonts of Baron's portfolio site.
+
+## D039: A third EX score that accepts renamed labels (2026-10-30, before Phase 7)
+
+- **Context:** in the Phase 4 live run, dev d019 and d027 failed for both systems although every number matched. The gold labelled rows `False`/`True` and `app`/`store`; the models wrote `weekday`/`weekend` and `Mobile app`/`Physical store`. EX matches columns by their exact values, so a renamed label column fails the case. Baron: a different label is acceptable as long as the meaning is the same.
+- **Decision:** add `ex_relabeled` next to `ex_strict` and `ex_lenient` (both unchanged). It is lenient EX, plus: a gold label column (anything not numeric) may be matched by a predicted column that renames it one-to-one. Every gold measure column must still match exactly; rows are paired by those measures; each label must map to exactly one predicted value and back; a result with no measure column gets no relaxation.
+- **Blind spot, handled by hand:** a code can't judge meaning, and a consistent swap (weekday counts labelled "weekend") also passes. Every report lists the cases that pass only under this rule ("Passing only with renamed labels (check by hand)"), so a person confirms the labels mean the same before the number is quoted.
+- **Effect on the committed Phase 4 runs, re-scored offline (no API calls):** d019 and d027 pass for both agent and baseline; nothing else changes. The committed result files keep their original scores.
+- **Alternatives:** an LLM judge for label meaning (paid, not deterministic); relabelling the gold to the models' wording (fits the gold to one model).
+
+## D040: Periods with no data are refused, with follow-up suggestions (2026-10-30, before Phase 7)
+
+- **Context:** dev d029 ("Bagaimana penjualan bulan ini?", asked on 2026-10-01) expected an answer for September 2026 with a stated assumption. Both live systems refused because October 2026 has no data. Baron preferred the refusal, with follow-up questions the user can pick.
+- **Decision:**
+  - a question about a period with no data at all (before 2024-01-01, after 2026-09-30, or the current month when the data stops earlier) is refused as unanswerable, with the reason (the dates the data covers) and up to three suggested questions the data can answer;
+  - a question about a period or group that exists but has no matching rows is answered: zero or an empty table is the answer (for example a manager asking about another region's stores);
+  - ambiguous but answerable questions still get a sensible default and a stated assumption ("this year" = 2026 so far);
+  - suggestions are model text shown as clickable questions. They come only with "unanswerable" refusals (never with unsafe ones), at most three, and are kept only if the input guard accepts them and every year they name is inside the data window. No query ran, so they can't quote a result. They are not scored;
+  - the SQL prompt, the agent state, `AgentResult`, `/api/ask`, the stream's `answer` event, the CLI, and the web app carry them; keyless demo question demo09 shows one.
+- **Gold labels:** the rule was applied to both splits by reading only the questions about periods (dev + test, regex scan). One label changed: **dev d029** `state_assumption` → `refuse_unanswerable`. Test cases checked and unchanged: t001 (stores open today: current attributes, answerable), t043 ("this year": 2026 has data, assumption), t046 and t049 (already refusals), t051 (unsafe). No test-split question was used for prompts or examples.
+- **Also found:** the input guard missed "Show the email of every customer" (it only matched "email address"). It now also catches names, emails, phones, and addresses "of" customers, employees, staff, or users; dev, example, and demo questions still pass.

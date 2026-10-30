@@ -439,24 +439,11 @@
   lang: id
   category: ambiguous
   difficulty: medium
-  expected: state_assumption
-  notes: October 2026 has no data yet; default = latest complete month (September 2026), net revenue
-  gold_sql: |
-    WITH order_net AS (
-      SELECT o.order_id, (o.ordered_at AT TIME ZONE 'Asia/Jakarta')::date AS order_date,
-             sum(oi.quantity * oi.unit_price_idr - oi.discount_idr) AS line_net
-      FROM analytics.fact_orders o
-      JOIN analytics.fact_order_items oi ON oi.order_id = o.order_id
-      WHERE o.status <> 'cancelled'
-      GROUP BY o.order_id, o.ordered_at
-    ),
-    refunds AS (
-      SELECT order_id, sum(refund_amount_idr) AS refunded FROM analytics.fact_returns GROUP BY order_id
-    )
-    SELECT sum(n.line_net - coalesce(r.refunded, 0)) AS net_revenue_idr
-    FROM order_net n
-    LEFT JOIN refunds r ON r.order_id = n.order_id
-    WHERE n.order_date BETWEEN DATE '2026-09-01' AND DATE '2026-09-30'
+  expected: refuse_unanswerable
+  notes: >-
+    "Bulan ini" is October 2026 (as-of 2026-10-01), which has no data yet. Policy D040: a period
+    with no data is refused with the reason and follow-up suggestions (e.g. September 2026).
+    Changed 2026-10-30 by Baron's decision; was state_assumption with September 2026.
 
 - id: d030
   question: What are our sales in Jakarta?

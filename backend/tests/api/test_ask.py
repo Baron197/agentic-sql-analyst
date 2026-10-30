@@ -82,3 +82,17 @@ def test_stream_reports_a_crash_as_an_error_event(client, resources, monkeypatch
     assert events(r) == [
         ("error", '{"code":"internal_error","message":"Something went wrong. Please try again."}')
     ]
+
+
+def test_no_data_refusal_streams_its_follow_up_questions(client):
+    r = sign_in(client).post(
+        "/api/ask/stream", json={"question": "How many orders were placed in December 2026?"}
+    )
+    evs = events(r)
+    answer = json.loads(evs[-2][1])
+    assert [e for e, _ in evs][-2:] == ["answer", "done"]
+    assert answer["status"] == "refused" and "30 September 2026" in answer["refusal_reason"]
+    assert answer["suggestions"] == [
+        "How many orders were placed in September 2026?",
+        "How many orders were placed each month in 2026?",
+    ]

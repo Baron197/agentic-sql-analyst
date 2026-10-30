@@ -153,7 +153,13 @@ export function AskPage() {
           <p className="mb-3 text-sm text-ink-mute">
             <span className="text-ink-soft">Question:</span> {run.question}
           </p>
-          <RunResult run={run} />
+          <RunResult
+            run={run}
+            onAsk={(q) => {
+              setQuestion(q);
+              void ask(q);
+            }}
+          />
         </section>
       )}
     </div>

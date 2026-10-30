@@ -67,6 +67,7 @@ class AskResponse(BaseModel):
     assumptions: list[str]
     caveats: list[str]
     refusal_reason: str | None
+    suggestions: list[str]
     usage: Usage
 
 
@@ -99,5 +100,6 @@ def ask_response(r: AgentResult) -> AskResponse:
         assumptions=r.assumptions,
         caveats=r.caveats,
         refusal_reason=r.refusal.reason if r.refusal else None,
+        suggestions=r.suggestions,
         usage=usage_of(r),
     )

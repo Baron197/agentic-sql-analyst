@@ -3,7 +3,13 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from eval.metrics import mean_std, percentile, results_match, typed_numbers
+from eval.metrics import (
+    mean_std,
+    percentile,
+    results_match,
+    results_match_relabeled,
+    typed_numbers,
+)
 
 
 def test_row_order_and_column_order_are_ignored():
@@ -71,3 +77,43 @@ def test_percentile_and_mean_std():
     assert percentile([], 0.5) is None
     assert mean_std([0.5, 0.7]) == {"mean": 0.6, "std": 0.1414}
     assert mean_std([None]) == {"mean": None, "std": None}
+
+
+# ---------------------------------------------------------- relabeled EX (D039)
+def test_relabeled_accepts_a_one_to_one_renamed_label():
+    # dev d019 (2026-10-30 live run): a weekend flag vs. words, same counts
+    gold = [[False, 4009], [True, 1996]]
+    pred = [["weekday", 4009], ["weekend", 1996]]
+    assert not results_match(gold, pred, strict=False)
+    assert results_match_relabeled(gold, pred)
+    # dev d027: channel codes vs. channel names, extra columns still allowed
+    gold = [["app", Decimal("136.5")], ["store", Decimal("406.3")]]
+    pred = [["Mobile app", 136.5, "x"], ["Physical store", 406.3, "y"]]
+    assert results_match_relabeled(gold, pred)
+
+
+def test_relabeled_still_needs_every_number_to_match():
+    gold = [["app", 100], ["store", 200]]
+    assert not results_match_relabeled(gold, [["Mobile app", 100], ["Physical store", 201]])
+
+
+def test_relabeled_needs_a_one_to_one_mapping():
+    gold = [["app", "a", 1], ["web", "a", 2], ["store", "b", 3]]
+    merged = [["online", "a", 1], ["online", "a", 2], ["store", "b", 3]]  # two labels -> one
+    assert not results_match_relabeled(gold, merged)
+
+
+def test_relabeled_gives_no_relaxation_without_a_measure_column():
+    assert not results_match_relabeled([["qris"], ["card"]], [["x"], ["y"]])
+
+
+def test_relabeled_respects_row_order_when_it_matters():
+    gold = [["a", 3], ["b", 1]]
+    assert results_match_relabeled(gold, [["A", 3], ["B", 1]], order_matters=True)
+    assert not results_match_relabeled(gold, [["B", 1], ["A", 3]], order_matters=True)
+
+
+def test_relabeled_blind_spot_a_consistent_swap_passes():
+    """Documented limitation: reports list relaxed-only passes for a human to check."""
+    gold = [[False, 4009], [True, 1996]]
+    assert results_match_relabeled(gold, [["weekend", 4009], ["weekday", 1996]])

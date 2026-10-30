@@ -6,6 +6,7 @@ multisets (as ordered lists when the case says order matters):
   columns by their values;
 - strict: the prediction has exactly the gold's columns;
 - lenient: the gold's columns are a subset of the prediction's (extra columns allowed);
+- relabeled (`results_match_relabeled`): lenient, and a label column may be renamed one-to-one;
 - numbers are rounded to the precision of the gold column (gold 0.0430 accepts 0.04298,
   gold 3480887 accepts 3480887.43), so a total that is off by one order still fails.
 """
@@ -109,6 +110,103 @@ def results_match(
         if (pred_canon if order_matters else Counter(pred_canon)) == gold_key:
             return True
     return False
+
+
+def _is_measure(values: list[Any]) -> bool:
+    return any(_is_number(v) for v in values) and all(_is_number(v) or v is None for v in values)
+
+
+def results_match_relabeled(
+    gold_rows: Sequence[Sequence[Any]],
+    pred_rows: Sequence[Sequence[Any]],
+    *,
+    order_matters: bool = False,
+) -> bool:
+    """Lenient EX that also accepts renamed labels (docs/DECISIONS.md D039).
+
+    A gold label column (anything not numeric: flags, codes, names) may be matched by a
+    predicted column that renames it one-to-one: `False`/`True` -> `weekday`/`weekend`,
+    `app` -> `Mobile app`. Every gold measure column must still match exactly as in lenient
+    EX, rows are paired by those measures, and each label must map to exactly one predicted
+    value and back. A result with no measure column (a list of names) gets no relaxation.
+
+    Blind spot: a consistent swap (weekday counts labelled "weekend" and vice versa) also
+    passes, so reports list the cases that pass only under this rule for a human to check.
+    """
+    if results_match(gold_rows, pred_rows, order_matters=order_matters, strict=False):
+        return True
+    if len(gold_rows) != len(pred_rows) or not gold_rows:
+        return False
+    n_gold, n_pred = len(gold_rows[0]), len(pred_rows[0])
+    if n_pred < n_gold:
+        return False
+    gold_columns = [_column(gold_rows, j) for j in range(n_gold)]
+    measures = [j for j in range(n_gold) if _is_measure(gold_columns[j])]
+    labels = [j for j in range(n_gold) if j not in measures]
+    if not measures or not labels:
+        return False
+
+    precision = [max((_decimals(v) for v in col), default=0) for col in gold_columns]
+    pred_columns = [_column(pred_rows, k) for k in range(n_pred)]
+
+    def canon_col(values: list[Any], j: int) -> list[Any]:
+        return [_canon(v, precision[j]) for v in values]
+
+    candidates: list[list[int]] = []
+    for j in range(n_gold):
+        gold = canon_col(gold_columns[j], j)
+        if j in measures:
+            want = Counter(gold)
+            cands = [k for k in range(n_pred) if Counter(canon_col(pred_columns[k], j)) == want]
+        else:  # same number of distinct values, each used by as many rows
+            shape = sorted(Counter(gold).values())
+            cands = [
+                k
+                for k in range(n_pred)
+                if sorted(Counter(canon_col(pred_columns[k], j)).values()) == shape
+            ]
+        if not cands:
+            return False
+        candidates.append(cands)
+
+    for mapping in product(*candidates):
+        if len(set(mapping)) != n_gold:
+            continue
+        if _relabel_pairs_ok(
+            gold_rows, pred_rows, mapping, measures, labels, precision, order_matters
+        ):
+            return True
+    return False
+
+
+def _relabel_pairs_ok(gold_rows, pred_rows, mapping, measures, labels, precision, order_matters):
+    """Pair rows by their measures, then check each label maps one-to-one."""
+
+    def key(row, cols, mapped):
+        return tuple(_canon(row[mapping[j] if mapped else j], precision[j]) for j in cols)
+
+    if order_matters:
+        pairs = list(zip(gold_rows, pred_rows, strict=True))
+        if any(key(g, measures, False) != key(p, measures, True) for g, p in pairs):
+            return False
+    else:
+        pool: dict[tuple, list] = {}
+        for p in pred_rows:
+            pool.setdefault(key(p, measures, True), []).append(p)
+        pairs = []
+        for g in gold_rows:
+            bucket = pool.get(key(g, measures, False))
+            if not bucket:
+                return False
+            pairs.append((g, bucket.pop()))
+    for j in labels:
+        forward: dict[Any, Any] = {}
+        backward: dict[Any, Any] = {}
+        for g, p in pairs:
+            gv, pv = _canon(g[j], precision[j]), _canon(p[mapping[j]], precision[j])
+            if forward.setdefault(gv, pv) != pv or backward.setdefault(pv, gv) != gv:
+                return False
+    return True
 
 
 # ------------------------------------------------------------------- grounding

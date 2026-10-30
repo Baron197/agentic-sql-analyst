@@ -65,6 +65,7 @@ def ask_events(agent: Agent, question: str, user: UserScope) -> Iterator[str]:
                 "caveats": result.caveats,
                 "chart": result.chart,
                 "refusal_reason": result.refusal.reason if result.refusal else None,
+                "suggestions": result.suggestions,
             },
         )
         yield sse("done", {"run_id": result.run_id, "usage": usage_of(result)})

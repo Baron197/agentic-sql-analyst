@@ -30,11 +30,13 @@ class DemoQuestion(BaseModel):
     question: str
     lang: Literal["en", "id"]
     users: list[Literal["analyst", "manager_jakarta"]]
-    expected: Literal["answer", "refuse_unsafe"]
+    expected: Literal["answer", "refuse_unsafe", "refuse_unanswerable"]
     assumptions: list[str] = Field(default_factory=list)
     sql: str | None = None
     template: str | None = None
     chart: ChartSpec | None = None
+    reason: str | None = None  # scripted refusals only
+    suggestions: list[str] = Field(default_factory=list)
 
 
 def load_demo(path: Path = DEMO_PATH) -> list[DemoQuestion]:
@@ -67,6 +69,10 @@ class KeylessResponder:
             if demo and demo.sql:
                 return SQLDraft(
                     decision="answer", sql=demo.sql, assumptions=demo.assumptions, confidence="high"
+                )
+            if demo and demo.expected == "refuse_unanswerable":
+                return SQLDraft(
+                    decision="refuse_unanswerable", reason=demo.reason, suggestions=demo.suggestions
                 )
             if self.fallback == "generic":
                 return SQLDraft(

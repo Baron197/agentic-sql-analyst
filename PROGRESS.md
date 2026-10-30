@@ -38,7 +38,7 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 - Rate limits live in memory in one API process (D032): fine for one container, not for several instances.
 - Sessions are stateless JWTs: sign-out clears the cookie, but a copied token stays valid until it expires (8 h, D033).
 - The function allow-list (D014) may refuse a legitimate function the agent needs; watch for `forbidden_function` errors in the Phase 3/4 eval and add functions deliberately.
-- Gold SQL is Claude's reading of each question. Baron should spot-check the ambiguous and metric-definition cases before any test-split number is quoted.
+- Gold SQL is Claude's reading of each question. Baron reviewed d019, d027, d029 on 2026-10-30 (D039, D040); the other ambiguous and metric-definition cases are still worth a spot-check before any test-split number is quoted.
 - Whether a live model's answer repeats the planted injection (t056) is not scored automatically (D020). Templates make typed figures impossible, but template prose is still model text; check t056 in the Phase 7 live test-split run.
 - The embedding model downloads from Hugging Face on the first `index-build` (unauthenticated; ~220 MB). On Windows, huggingface_hub warns that symlinks are unsupported; the poe tasks silence the warning and caching still works.
 - **Recurring (2026-10-29 and 2026-10-30):** Docker Desktop 4.80 on this machine crashed at startup because of leftover AF_UNIX socket files that Windows refuses to delete (error 1920). Workaround used on 2026-10-29: quit Docker Desktop and rename the folders aside: `%LOCALAPPDATA%\Docker\run` and `%LOCALAPPDATA%\docker-secrets-engine` (now `*.stale-20261029*`). They can be deleted after a reboot. If Docker fails to start again with "The file cannot be accessed by the system", repeat that. Quitting Docker Desktop normally (not killing it) should avoid it, but it happened again on 2026-10-30 after a normal session end (folders renamed to `*.stale-20261030`). The crash is in Docker's "Inference manager" (Docker Model Runner); turning that feature off in Docker Desktop settings may stop it. That is Baron's call, since it changes his Docker configuration.
@@ -47,13 +47,25 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 
 Phase 7: real-mode evaluation and hardening (BUILD_GUIDE §13), only when Baron says so and with his budget OK. Start with a plan covering:
 - candidate models (2-3) and the cost estimate for the test split × 3 repeats, plus the ablations (no retrieval, no repair, no few-shot, critic on) on dev or test;
-- the open items from Phase 4: why the agent costs about twice the baseline (cache writes), and Baron's spot-check of the d019, d027, d029 gold answers;
+- the open item from Phase 4: why the agent costs about twice the baseline (cache writes);
+- report `ex_relabeled` next to strict and lenient EX, and check by hand every case listed under "Passing only with renamed labels" (D039);
 - t056 (does a live answer repeat the planted injection?);
 - `docs/EVAL_RESULTS.md`, with every number taken from a committed `eval/results/` file.
 
 ## Session log
 
 _(newest first: date, what was done, decisions, issues)_
+
+### 2026-10-30: Scoring and refusal policy, decided with Baron (before Phase 7)
+
+- **Review of the three dev failures shared by agent and baseline:** d019 and d027 had every number right but different labels (`False`/`True` vs `weekday`/`weekend`; `app` vs `Mobile app`). d029 ("penjualan bulan ini" on 2026-10-01) was refused by both because October 2026 has no data.
+- **Baron's decisions:** different labels with the same meaning are acceptable; a period with no data should be refused, with follow-up questions offered.
+- **Built:**
+  - `ex_relabeled` (D039): a third EX score, with a "check by hand" list in every report. Re-scoring the committed Phase 4 runs offline, d019 and d027 now pass for both systems; the result files were not rewritten.
+  - Follow-up suggestions on unanswerable refusals (D040), through the prompt, agent, API (`suggestions` in `/api/ask` and the stream's `answer` event), CLI, and web app (clickable chips). Keyless demo09 shows it. Kept only if the input guard accepts them and every year named is inside the data window.
+  - Gold: dev d029 → `refuse_unanswerable`. The test split was scanned for period questions only; no test label changed (D040 lists the cases checked).
+  - The input guard now catches "the email of every customer"-style requests (a gap found while testing).
+- **Checks:** `REQUIRE_DB=1 uv run poe check` 741 passed; `uv run poe web-check` 25 passed and builds; the Playwright smoke test passes; gold-vs-gold on the updated gold is 100% on every EX score (`eval/results/2026-10-30_gold_na_dev+test_na_n100_r1_2.md`).
 
 ### 2026-10-30: Phase 6 web app (completed)
 

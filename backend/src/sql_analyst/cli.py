@@ -53,6 +53,9 @@ def print_result(r: AgentResult) -> None:
     print(f"\n{r.answer}")
     if r.refusal:
         print(f"  reason ({r.refusal.source}): {r.refusal.reason}")
+    if r.suggestions:
+        print("\nYou could ask instead:")
+        print("\n".join(f"  - {q}" for q in r.suggestions))
     if r.error:
         print(f"  error: {r.error}")
     if r.assumptions:

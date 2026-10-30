@@ -47,6 +47,7 @@ class AgentResult(BaseModel):
     truncated: bool
     chart: ChartSpec | None
     refusal: Refusal | None
+    suggestions: list[str]  # follow-up questions offered with an "unanswerable" refusal
     error: str | None
     stop_reason: str | None
     sql_attempts: list[SQLAttempt]
@@ -128,6 +129,7 @@ def finalize(state: AgentState, deps: AgentDeps) -> dict[str, Any]:
         truncated=r.truncated if r else False,
         chart=state.chart if status == "answered" else (choose_chart(None, r) if r else None),
         refusal=state.refusal,
+        suggestions=state.suggestions if status == "refused" else [],
         error=state.error,
         stop_reason=state.stop_reason,
         sql_attempts=state.sql_attempts,
