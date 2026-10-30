@@ -102,6 +102,11 @@ def test_manager_hand_written_sql_against_another_region_returns_zero_rows(
         ("SET ROLE analytics_owner", pg_errors.InsufficientPrivilege),
         ("COPY (SELECT 1) TO '/tmp/x'", pg_errors.InsufficientPrivilege),
         ("ALTER ROLE nlq_reader BYPASSRLS", DENIED_ERRORS),  # read-only transaction refuses first
+        (
+            "DELETE FROM retrieval.chunks",
+            DENIED_ERRORS,
+        ),  # the agent reads the index, never writes it
+        ("SELECT key FROM rls.signing_key, retrieval.meta", pg_errors.InsufficientPrivilege),
     ],
 )
 def test_reader_role_cannot_reach_core_secrets_files_or_other_roles(reader_conn, sql, error):

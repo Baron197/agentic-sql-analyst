@@ -185,3 +185,63 @@ Short entries, newest last: context, decision, why, alternatives considered.
   - the harness infers the provider from `--model` (`gpt-*` → openai, `claude-*` → anthropic) or takes `--provider`.
 - **Prices:** OpenAI standard tier, read from developers.openai.com/api/docs/pricing on 2026-10-30: `gpt-4o-mini` $0.15 / $0.60 (cached $0.075); `gpt-6-luna` $0.10 / $0.50 (cached $0.01); `gpt-5-mini` $0.25 / $2.00. The page lists no cache-write price, so writes are assumed to cost the normal input rate.
 - **Why:** the interface stays provider-agnostic, so the Anthropic adapter stays and the final model choice is still Phase 7.
+
+## D024: Multilingual embedding model instead of a small English BGE (2026-10-30, Phase 4)
+
+- **Context:** BUILD_GUIDE §4 suggests a small BGE model with fastembed. About a third of the questions (and the dictionary synonyms) are in Bahasa Indonesia; the English BGE models embed it poorly.
+- **Decision:** `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` through fastembed 0.9.1 (ONNX, 384 dimensions, ~220 MB, Apache-2.0), cached in `.cache/fastembed` (gitignored; cached in CI). Unit tests use a hashing embedder, so they need no download.
+- **Why:** still local, keyless, and free; handles both languages with one index.
+- **Alternatives:** `BAAI/bge-small-en-v1.5` (67 MB, English only); `intfloat/multilingual-e5-large` (2.2 GB, too heavy for CI and a small server).
+
+## D025: Retrieval index in pgvector, in its own `retrieval` schema (2026-10-30, Phase 4)
+
+- **Context:** the agent needs vector search over ~217 chunks (22 views, 161 columns, 6 metrics, 28 examples) plus ~650 categorical values.
+- **Decision:**
+  - `poe index-build` (run after `db-load`; `db-reset` now does both) creates schema `retrieval` with pgvector installed into it and tables `chunks`, `column_values`, `meta`;
+  - the agent reads it as `nlq_reader` (`USAGE` + `SELECT` only), with fixed queries written by code;
+  - BM25 (rank-bm25) runs in memory over the same chunks; the two rankings are fused by RRF (k = 60);
+  - the index records its embedding model, and the agent refuses to start against an index built with a different one.
+- **Why:** follows the guide's architecture (vectors in Postgres). Model-written SQL still cannot read the index: the validator allows `analytics` views only (new adversarial cases).
+- **Alternatives:** an in-memory index only (simpler, but drops pgvector); a separate role for retrieval reads (more moving parts for non-sensitive data).
+- **Note:** the values cover all regions. They are dimension names (cities, stores, categories), not personal data; the rows behind them stay protected by row-level security (docs/SECURITY.md).
+
+## D026: Value matching and join bridging rules (2026-10-30, Phase 4)
+
+- **Decision:**
+  - value matching uses rapidfuzz on 1-4 word phrases of the question. Phrases of three characters or fewer must match exactly ("Jkt" → `city_code` JKT). Single words must match a whole value. Multi-word phrases may match part of a value ("Gading Serpong" → the store "Arunika Tangerang Gading Serpong"). Values of deprecated columns (`fact_orders.region_code`) are never suggested;
+  - after picking the top views, retrieval adds every view on any shortest join path between them. When paths tie (orders reach regions through the store, the customer, or the shipment destination), all of them are added, and the business rules say which one to use.
+- **Why:** these rules came from checking the dev questions by hand; earlier versions matched "store" to every store or nudged the model towards the deprecated column.
+
+## D027: Grounding is scored on the text the model typed (2026-10-30, Phase 4)
+
+- **Context:** guarantee 3: every number in an answer comes from the query. The rendered answer naturally contains numbers (code put them there), so checking it would flag every correct answer.
+- **Decision:**
+  - the model writes a template; `render_numbers` rejects it if the template without its slots, or its caveats, contain a number that is not in the question;
+  - the eval scores the same text (`Prediction.model_text`), using the same function (`agent/grounding.py`, re-exported by `eval/metrics.py`); for the baseline the whole free-text answer is model-typed;
+  - assumptions keep a figure only if it also appears in the question or the executed SQL (dates and limits the query uses); others are dropped;
+  - refusal messages are written by code, and the model's refusal reason is shown separately as the model's note, not as the answer.
+- **Why:** the check measures exactly what the guarantee promises, with one definition shared by the agent and the scorer.
+- **Alternatives:** checking the rendered answer minus filled values (fragile with formatting); no check on assumptions (would let figures through a side door).
+
+## D028: Ablation switches; critic and LLM guard off by default (2026-10-30, Phase 4)
+
+- **Decision:** `AgentConfig` has `retrieval`, `repair`, `few_shot`, `critic`, `guard_llm`; the harness exposes `--ablation no-retrieval,no-repair,no-few-shot` and `--critic`, and names the result file after the variant (for example `agent-no-retrieval`). The no-retrieval variant puts the whole dictionary in the static prompt, like the baseline, with no value matches or examples.
+- **Why:** BUILD_GUIDE §8.2 and §9 say the critic's value must be measured, not assumed. Both optional LLM calls add cost and latency, so they start off and Phase 7 measures them.
+
+## D029: Budget, repair, and fallback semantics (2026-10-30, Phase 4)
+
+- **Decision:**
+  - limits per run (settings): 8 LLM calls, 60,000 tokens, $0.05, 60 s;
+  - the call limit is checked before entering a node that calls the model, so a run never exceeds it; the others are checked after each node;
+  - repairs are capped at 3 (validator error, database error, or a suspicious result). `check_result` may send a run back once; after that an empty or odd result is accepted with a caveat. If a retry it asked for fails with no repairs left, the earlier result is answered with a caveat;
+  - `write_answer` retries once after a rejected template, then the answer is the table with a code-written sentence;
+  - a budget stop ends with status `partial` and returns the table if a query ran.
+- **Why:** every failure path ends in a defined state that still shows the user something verifiable.
+
+## D030: Keyless demo mode and the run store (2026-10-30, Phase 4)
+
+- **Decision:**
+  - `data/demo.yaml` holds 8 demo questions (6 answers in English and Indonesian, 2 unsafe). In keyless mode the fake model replays their SQL and templates; retrieval, validation, the read-only executor, row-level security, and rendering all run for real. Other questions are declined in the CLI; eval plumbing runs use one canned query instead, so every step is exercised;
+  - the demo questions go through the same leakage guard as the few-shot examples;
+  - runs are appended to `runs/<date>.jsonl` (gitignored, 50 rows kept per run). Phase 5 moves them to Postgres, written by a separate role, so `nlq_reader` stays read-only.
+- **Why:** anyone can run the agent with no API key, and keyless output is labelled so it is never mistaken for model quality.

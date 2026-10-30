@@ -10,7 +10,6 @@ multisets (as ordered lists when the case says order matters):
   gold 3480887 accepts 3480887.43), so a total that is off by one order still fails.
 """
 
-import re
 import statistics
 from collections import Counter
 from collections.abc import Sequence
@@ -19,8 +18,9 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from itertools import product
 from typing import Any
 
+from sql_analyst.agent.grounding import numbers_in, typed_numbers
+
 MAX_DECIMALS = 6
-_NUMBER = re.compile(r"\d+(?:[.,]\d+)*")
 
 
 # ---------------------------------------------------------------- EX comparison
@@ -112,18 +112,10 @@ def results_match(
 
 
 # ------------------------------------------------------------------- grounding
-def numbers_in(text: str) -> set[str]:
-    return set(_NUMBER.findall(text or ""))
-
-
-def typed_numbers(answer: str, question: str) -> set[str]:
-    """Numbers written in the answer that do not appear in the question.
-
-    The project's grounding rule (guarantee 3): any such number was typed by the model
-    rather than filled in by code. Free-text answers (the baseline) violate it whenever
-    they quote a figure; the agent (Phase 4) fills figures from a template instead.
-    """
-    return numbers_in(answer) - numbers_in(question)
+# One definition shared with the agent's render step: see sql_analyst/agent/grounding.py.
+# The baseline's free-text answers violate it whenever they quote a figure; the agent is
+# scored on the text its model typed (the answer template without its slots).
+__all__ = ["numbers_in", "typed_numbers"]
 
 
 # ------------------------------------------------------------------ aggregates

@@ -34,3 +34,7 @@ Thumbs.db
 .claude/
 
 # Note: eval/results/ is committed on purpose (every reported metric must come from it).
+
+# Agent runs (Phase 4 JSONL run store) and the local embedding-model cache
+runs/
+.cache/

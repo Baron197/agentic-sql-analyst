@@ -110,9 +110,64 @@ def test_live_mode_without_a_key_fails_before_any_call(results_dir, monkeypatch)
         )
 
 
-def test_agent_system_is_not_available_before_phase_4(results_dir):
+def test_keyless_agent_run_passes_both_gates_and_is_labelled_plumbing_only(results_dir):
+    """dev d001-d040 includes the adversarial and access-control cases (safety gate)."""
+    assert run_eval.main(["--system", "agent", "--mode", "keyless", "--split", "dev"]) == 0
+    report = _load(next(results_dir.glob("*.json")))
+    meta, agg = report["meta"], report["aggregate"]
+    assert meta["label"].startswith("PLUMBING ONLY") and meta["system"] == "agent"
+    assert all(meta["gates"].values()) and len(meta["gates"]) == 2
+    assert agg["safety_block_rate"]["mean"] == 1.0 and agg["unsafe_refusal_rate"]["mean"] == 1.0
+    assert agg["grounding_violations"]["mean"] == 0 and agg["repair_rate"]["mean"] == 0
+    assert meta["db_unchanged"] is True
+
+
+def test_agent_ablation_flags_name_the_variant(results_dir):
+    argv = [
+        "--system",
+        "agent",
+        "--split",
+        "dev",
+        "--limit",
+        "2",
+        "--ablation",
+        "no-retrieval,no-repair",
+    ]
+    assert run_eval.main(argv) == 0
+    assert (
+        _load(next(results_dir.glob("*.json")))["meta"]["system"] == "agent-no-retrieval+no-repair"
+    )
     with pytest.raises(SystemExit):
-        run_eval.main(["--system", "agent", "--split", "dev"])
+        run_eval.main(["--system", "agent", "--split", "dev", "--ablation", "no-thinking"])
+
+
+def test_live_agent_run_prints_an_estimate_and_refuses_without_confirmation(
+    results_dir, monkeypatch, capsys
+):
+    settings = get_settings().model_copy(
+        update={"openai_api_key": SecretStr("sk-test-not-a-real-key")}
+    )
+    monkeypatch.setattr(run_eval, "get_settings", lambda: settings)
+    argv = ["--system", "agent", "--mode", "live", "--split", "dev", "--model", "gpt-6-luna"]
+    assert run_eval.main(argv) == 3
+    out = capsys.readouterr().out
+    assert "agent, model=gpt-6-luna" in out and "~4 calls each" in out and "Estimated cost" in out
+    assert not list(results_dir.iterdir())
+
+
+def test_agent_is_scored_on_the_text_its_model_typed():
+    """Code-filled figures in the rendered answer are not violations; typed ones are."""
+    from eval.cases import load_cases
+    from eval.systems import Prediction
+
+    case = load_cases("dev")[0]
+    pred = Prediction(
+        case_id=case.id, decision="answer", executed=True, answer="There are 4 stores.",
+        model_text="There are   stores.",
+    )  # fmt: skip
+    assert run_eval.score_case(case, pred, [[4]], 0).typed_numbers == []
+    pred.model_text = "There are 4 stores."
+    assert run_eval.score_case(case, pred, [[4]], 0).typed_numbers == ["4"]
 
 
 def test_baseline_prompt_contains_the_dictionary_but_no_eval_questions():

@@ -26,6 +26,10 @@ class Prediction(BaseModel):
     truncated: bool = False
     executed: bool = False  # ran through the scoped, read-only executor
     answer: str | None = None
+    # Text the model typed in the answer, if the system separates it from code-filled values
+    # (the agent: its template without slots). None = the whole answer is model-typed.
+    model_text: str | None = None
+    repairs: int | None = None  # attempts sent back to SQL generation (None: no repair loop)
     usages: list[Usage] = Field(default_factory=list)
     latency_ms: float = 0.0
 

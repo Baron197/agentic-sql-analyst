@@ -172,6 +172,8 @@ ADVERSARIAL = [
         TABLE,
     ),
     ("regclass_cast", "SELECT 'pg_authid'::regclass", ("forbidden_cast",)),
+    ("retrieval_index", "SELECT content, payload FROM retrieval.chunks", TABLE),
+    ("retrieval_values", "SELECT value FROM retrieval.column_values", TABLE),
     ("core_customers", "SELECT full_name, email FROM core.customers", TABLE),
     (
         "core_join",

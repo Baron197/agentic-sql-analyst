@@ -10,7 +10,7 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 | 1 Synthetic enterprise database | **done** (2026-10-29) | all DoD items pass; see session log |
 | 2 Safety layer | **done** (2026-10-29) | all DoD items pass; see session log |
 | 3 Eval harness, golden set, baseline | **done** (2026-10-30) | all DoD items pass; see session log |
-| 4 Agent core | not started | next |
+| 4 Agent core | **in progress** | all DoD items pass except the live agent-vs-baseline run on dev (needs Baron's OK) |
 | 5 API | not started | |
 | 6 Web app | not started | |
 | 7 Real-mode evaluation | not started | needs Baron's budget OK |
@@ -35,25 +35,53 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 ## Open issues
 
 - CI has never run on GitHub (nothing pushed). Its db tests assume the full-scale seed, which the workflow loads with `poe db-load` before `poe check`; the workflow sets throwaway `NLQ_READER_PASSWORD` and `RLS_SIGNING_KEY` values.
-- Layers 1 (input guard), 7 (hostile data), and 8 (budget, rate limit, spend cap, kill switch) of BUILD_GUIDE §7 are not built yet; they belong to Phases 4-5 and are listed in docs/SECURITY.md under "Threats covered in later phases".
+- Layer 8's API half (rate limit, daily spend cap, kill switch) belongs to Phase 5. Layers 1, 7, and the agent budget guard are built (Phase 4).
 - The function allow-list (D014) may refuse a legitimate function the agent needs; watch for `forbidden_function` errors in the Phase 3/4 eval and add functions deliberately.
 - Gold SQL is Claude's reading of each question. Baron should spot-check the ambiguous and metric-definition cases before any test-split number is quoted.
-- Whether an answer repeats the planted injection (t056) is not scored automatically yet (D020); Phase 4 templates make it testable.
+- Whether a live model's answer repeats the planted injection (t056) is not scored automatically (D020). Templates make typed figures impossible, but template prose is still model text; check t056 in the Phase 7 live test-split run.
+- The embedding model downloads from Hugging Face on the first `index-build` (unauthenticated; ~220 MB). On Windows, huggingface_hub warns that symlinks are unsupported; the poe tasks silence the warning and caching still works.
 - **Recurring (2026-10-29 and 2026-10-30):** Docker Desktop 4.80 on this machine crashed at startup because of leftover AF_UNIX socket files that Windows refuses to delete (error 1920). Workaround used on 2026-10-29: quit Docker Desktop and rename the folders aside: `%LOCALAPPDATA%\Docker\run` and `%LOCALAPPDATA%\docker-secrets-engine` (now `*.stale-20261029*`). They can be deleted after a reboot. If Docker fails to start again with "The file cannot be accessed by the system", repeat that. Quitting Docker Desktop normally (not killing it) should avoid it, but it happened again on 2026-10-30 after a normal session end (folders renamed to `*.stale-20261030`). The crash is in Docker's "Inference manager" (Docker Model Runner); turning that feature off in Docker Desktop settings may stop it. That is Baron's call, since it changes his Docker configuration.
 
 ## Next step
 
-Phase 4: Agent core (BUILD_GUIDE §8 and §13). Start with a plan covering:
-- agent state, nodes, and the LangGraph graph (§8.1-8.2), with the budget guard on every edge;
-- retrieval: hybrid BM25 + local fastembed vectors (pgvector) over the dictionary, glossary, `data/examples.yaml`, and the value index (`dictionary/values.py`);
-- the repair loop (≤ 3), check_result, write_answer templates, and render_numbers (rejects any digit not in the question);
-- tracing, and the CLI `uv run poe ask "…" --user analyst`;
-- wiring `--system agent` into `eval/run_eval.py`, plus keyless graph tests (success, repair, unsafe refusal, unanswerable refusal, budget stop, grounding rejection);
-- the live agent-vs-baseline run on `dev` needs Baron's OK with a cost estimate. The providers already available are OpenAI (key in `.env`) and Anthropic (no key yet).
+Finish Phase 4 with the last DoD item: **the live agent-vs-baseline run on `dev`, with Baron's OK**.
+- Commands (each prints its estimate first; nothing is spent without `--confirm-live`):
+  - `uv run poe eval --system agent --mode live --split dev --model gpt-6-luna --confirm-live`
+  - `uv run poe eval --system baseline --mode live --split dev --model gpt-6-luna --confirm-live`
+- Estimated upper bound, 40 questions × 1 repeat, no caching assumed: agent ≤ $0.19, baseline ≤ $0.09 (total ≤ $0.28). Phase 3's measured cost was ~7× below its estimate.
+- Then commit the results, write the comparison in this file (date, model, n, repeats; dev is for tuning, so these are not reportable accuracy numbers), mark Phase 4 done, and stop. Phase 5 (API) starts only when Baron says so.
 
 ## Session log
 
 _(newest first: date, what was done, decisions, issues)_
+
+### 2026-10-30: Phase 4 agent core (built and tested keylessly; live run pending)
+
+**Built**
+- `agent/`: LangGraph graph (`graph.py`) with nodes guard_input → retrieve_context → generate_sql → validate_sql → execute → check_result → write_answer → render_numbers → finalize, plus refuse and budget_stop. Nodes leave the default path through `goto`; every edge goes through the budget guard (`budget.py`).
+  - `guard.py`: deterministic input rules (EN/ID) and language detection; optional LLM classifier, off by default.
+  - `nodes/sql.py`: structured SQL draft, validation, execution (validated again before running), repairs ≤ 3.
+  - `nodes/check.py`: empty / all-NULL / implausible / negative-count / truncated checks, one retry; optional critic, off by default.
+  - `nodes/answer.py` + `render.py`: templates with slots, locale formatting (`IDR 1.23B`, `Rp 1,23 miliar`, percentages), digit rejection, one retry then a table-only answer; chart choice by result shape.
+  - `nodes/finalize.py`: `AgentResult` (answer, SQL, rows, assumptions, caveats, chart, trace, per-call usage, totals) saved to `runs/<date>.jsonl`.
+  - `prompts/*.md`, `texts.py` (code-written sentences EN/ID), `keyless.py` + `data/demo.yaml` (8 demo questions), `factory.py`.
+- `retrieval/`: corpus (217 chunks), multilingual fastembed embeddings stored in pgvector (`poe index-build`, schema `retrieval`), BM25 + vector fused by RRF, rapidfuzz value matching (652 values), join bridging.
+- `observability.py` (trace and usage totals, JSONL run store); `users.py` (demo scopes, shared with the eval).
+- CLI: `uv run poe ask "…" [--user] [--mode live --model M] [--json]`; with no question it lists the demo questions.
+- Eval: `--system agent` with `--ablation` and `--critic`, a `repair_rate` metric, and grounding scored on the text the model typed (`Prediction.model_text`). The cost estimate covers the agent (4 calls per question).
+- Moved shared code into the package: `dictionary/render.py` (the baseline prompt is byte-identical, verified), `retrieval/examples.py`, `agent/grounding.py` (re-exported by `eval/metrics.py`).
+- Safety additions: the validator rejects `retrieval.*` (2 new adversarial cases, 103 total); `nlq_reader` cannot write the index; the threat table now covers layers 1, 7, 8 with tests.
+- CI: caches the embedding model, runs `index-build`, and adds a keyless agent eval.
+
+**Decisions:** D024 (multilingual embeddings), D025 (pgvector `retrieval` schema), D026 (value matching, join bridging), D027 (grounding on model-typed text), D028 (ablations; critic and LLM guard off), D029 (budget, repair, fallback semantics), D030 (keyless demo mode, run store).
+
+**DoD evidence (all keyless, no API key)**
+- `REQUIRE_DB=1 uv run poe check`: 680 passed (451 before), lint, format, and workflow schema clean.
+  - unit tests per node: `backend/tests/agent/test_nodes.py`, `test_render.py`, `test_guard.py`, `test_retrieval.py`;
+  - graph tests with the fake LLM for success, repair, unsafe refusal, unanswerable refusal, budget stop, and grounding rejection (plus capped repairs, empty-result retry, critic, model failures, ablations, prompt-cache stability): `test_graph.py`, 24 tests;
+  - keyless end to end for every demo question and both users against the real database, index, and RLS: `test_keyless_e2e.py`. The manager sees 20 Jabodetabek stores, the analyst 39.
+- `uv run poe eval --system agent --mode keyless --split dev`: both gates pass (safety 100%, grounding violations 0), labelled PLUMBING ONLY. Not committed as a result: it says nothing about quality.
+- **Pending:** the live agent-vs-baseline run (needs Baron's OK).
 
 ### 2026-10-30: Phase 3 completed (live baseline cost-tracking run)
 

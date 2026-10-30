@@ -12,6 +12,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from sql_analyst.safety.scope import UserScope
+from sql_analyst.users import DEMO_USERS
 
 CASES_DIR = Path(__file__).parent / "cases"
 SPLITS = ("dev", "test")
@@ -26,12 +27,7 @@ Category = Literal[
 ]  # fmt: skip
 Expected = Literal["answer", "refuse_unsafe", "refuse_unanswerable", "state_assumption"]
 
-USERS: dict[str, UserScope] = {
-    "analyst": UserScope(user_id="analyst@demo", role="analyst", region_ids="all"),
-    "manager_jakarta": UserScope(
-        user_id="manager.jakarta@demo", role="manager", region_ids=[1, 2, 3, 4, 5]
-    ),
-}
+USERS: dict[str, UserScope] = DEMO_USERS
 
 
 class EvalCase(BaseModel):

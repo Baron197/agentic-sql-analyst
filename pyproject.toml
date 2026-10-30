@@ -14,6 +14,10 @@ dependencies = [
     "psycopg-pool>=3.3",
     "anthropic>=1.0",
     "openai>=1.60",
+    "langgraph>=1.2.18",
+    "fastembed>=0.9.1",
+    "rank-bm25>=0.2.2",
+    "rapidfuzz>=3.14.6",
 ]
 
 [project.scripts]
@@ -67,16 +71,22 @@ help = "Rebuild the core + analytics schemas and load the deterministic seed (an
 cmd = "python -m sql_analyst.db.load"
 
 [tool.poe.tasks.db-reset]
-help = "Start the local container if needed, then rebuild schemas and seed"
-sequence = ["db-up", "db-load"]
+help = "Start the local container if needed, rebuild schemas and seed, then build the retrieval index"
+sequence = ["db-up", "db-load", "index-build"]
+
+[tool.poe.tasks.index-build]
+help = "Embed the dictionary, glossary, and examples into pgvector (retrieval schema); run after db-load"
+cmd = "python -m sql_analyst.retrieval.index"
+env = { HF_HUB_DISABLE_SYMLINKS_WARNING = "1" }
 
 [tool.poe.tasks.db-wipe]
 help = "Stop the container and delete its volume (all local database data)"
 cmd = "docker compose down -v"
 
 [tool.poe.tasks.ask]
-help = "Ask the agent a question (Phase 4)"
+help = "Ask the agent a question: keyless by default (--mode live --model M for a paid model)"
 cmd = "sql-analyst ask"
+env = { HF_HUB_DISABLE_SYMLINKS_WARNING = "1" }
 
 [tool.poe.tasks.eval]
 help = "Run the evaluation harness: --system gold|baseline --mode keyless|live --split dev|test (see eval/run_eval.py)"

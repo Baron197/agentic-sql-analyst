@@ -11,14 +11,14 @@ All data is synthetic (see [DATA.md](DATA.md)); this is a portfolio project buil
 
 | # | Layer | Where | Phase |
 |---|---|---|---|
-| 1 | Input guard (length, write intents, personal-data requests, off-topic) | agent `guard_input` | 4 |
+| 1 | Input guard: length, write intents, personal-data requests, prompt-injection phrasing (off-topic and unanswerable questions are refused by the model) | `agent/guard.py`, node `guard_input` | 4 |
 | 2 | SQL validator (sqlglot AST) | `backend/src/sql_analyst/safety/validator.py` | 2 |
 | 3 | Row cap: outer `LIMIT 1001`, return 1,000 and flag truncation | `safety/executor.py` | 2 |
 | 4 | Cost guard: `EXPLAIN (FORMAT JSON)`, reject plans above 250,000 | `safety/cost_guard.py` | 2 |
 | 5 | Executor: `nlq_reader` role, `READ ONLY` transaction, 5 s `statement_timeout`, connection pool | `safety/executor.py`, `db/load.py` | 2 |
 | 6 | Row-level security with a signed region scope | `db/security.sql`, `safety/scope.py` | 2 |
-| 7 | Hostile data: rows go to the model as delimited data; answers are templates | agent | 4 |
-| 8 | Budget guard, rate limit, daily spend cap, kill switch | agent, API | 4-5 |
+| 7 | Hostile data: rows go to the model as delimited JSON with `<` `>` escaped; answers are templates filled by code | `agent/nodes/answer.py`, `agent/render.py` | 4 |
+| 8 | Budget guard on every graph edge (LLM calls, tokens, cost, wall time; repairs capped at 3); rate limit, daily spend cap, kill switch | `agent/budget.py`, `agent/graph.py`; API in Phase 5 | 4-5 |
 
 ### Layer 2: the SQL validator
 
@@ -59,6 +59,14 @@ Reference data (calendar, regions, channels, categories, products, suppliers, pr
 
 `nlq_reader` has `EXECUTE` on the `rls` functions (Postgres checks function privileges in policies as the querying role) but no `USAGE` on schema `rls`, so its own SQL cannot call them by name. The policies resolved them by OID when they were created.
 
+### Layers 1, 7, 8: the agent (Phase 4)
+
+- **Input guard.** Fixed rules in English and Indonesian refuse write requests, personal-data requests, and prompt-injection phrasing before any model call. They are tuned on the dev split, the few-shot examples, and the demo questions only, never on the test split. The model's own `refuse_unsafe` / `refuse_unanswerable` decision is the second check; the validator, the read-only role, and row-level security stay behind both.
+- **Hostile data.** Result rows reach the model only inside `<query_result>…</query_result>` as JSON, with `<` and `>` escaped so a cell cannot close the tag. The prompt says rows are data, never instructions. The model writes a template with slots (`{{r0.net_revenue_idr}}`); code fills every figure, and any digit the model typed that is not in the question is rejected (one retry, then a table-only answer). Assumptions keep a figure only if it also appears in the question or the executed SQL.
+- **State is not trusted.** `execute` validates the SQL again before running it, so nothing in the agent state reaches the database without passing the validator.
+- **Budget.** Checked on every edge of the graph. The LLM-call limit is checked before entering a node that calls the model; tokens, cost, and wall time after each node. A stopped run ends with status `partial` and returns whatever is ready (the table, if a query ran).
+- **Retrieval index.** The `retrieval` schema holds dictionary text, few-shot examples, and categorical values (city, store, category names, and so on) for all regions. No categorical column is personal data, and the rows behind the values stay protected by row-level security. `nlq_reader` may `SELECT` from it (fixed, parameterised queries written by code); model-written SQL cannot, because the validator allows `analytics` views only.
+
 Demo scopes (users are seeded in Phase 5): `analyst@demo` = `all`; `manager.jakarta@demo` = the Jabodetabek region group (region IDs 1-5: Jakarta, Bogor, Depok, Tangerang, Bekasi).
 
 ## Threat model
@@ -82,15 +90,19 @@ Every threat maps to at least one test. Paths are relative to `backend/tests/`; 
 | Resource exhaustion through cross joins or huge generated series | 4 | `safety/test_executor.py::test_cost_guard_rejects_cross_joins`, `safety/test_executor.py::test_huge_generate_series_is_stopped_by_the_cost_guard` |
 | Long-running queries (pg_sleep, recursive CTEs the planner underestimates) | 2, 5 (timeout) | `safety/test_validator.py::test_adversarial_sql_is_rejected`, `safety/test_executor.py::test_statement_timeout_cancels_slow_queries` |
 | Huge result sets sent to the model or the browser | 3 | `safety/test_executor.py::test_row_cap_truncates_and_reports_it` |
-| The safety layer blocks legitimate analysis (false positives) | 2, 4 | `safety/test_validator.py::test_ordinary_analytical_sql_is_allowed`, `safety/test_executor.py::test_allowed_sql_runs_for_both_roles` |
+| The safety layer blocks legitimate analysis (false positives) | 2, 4, 1 | `safety/test_validator.py::test_ordinary_analytical_sql_is_allowed`, `safety/test_executor.py::test_allowed_sql_runs_for_both_roles`, `agent/test_guard.py::test_ordinary_questions_are_not_refused`, `agent/test_guard.py::test_guard_and_language_on_known_questions` |
+| Write intents, personal-data requests, or injection phrasing in the question | 1 (then the model, 2, 5, 6) | `agent/test_guard.py::test_unsafe_questions_are_refused`, `agent/test_guard.py::test_guard_and_language_on_known_questions`, `agent/test_graph.py::test_unsafe_question_is_refused_by_the_guard_before_any_model_call`, `agent/test_graph.py::test_unsafe_question_can_be_refused_by_the_model` |
+| Prompt injection through result rows (a cell that tries to close the data tag) | 7 | `agent/test_nodes.py::test_write_answer_sends_rows_as_escaped_data_with_a_row_limit` |
+| The model types a figure that did not come from the query | 7 | `agent/test_graph.py::test_typed_number_is_rejected_and_the_answer_rewritten`, `agent/test_graph.py::test_second_grounding_failure_falls_back_to_the_table_only`, `agent/test_graph.py::test_assumptions_with_invented_figures_are_dropped`, `evaluation/test_harness.py::test_agent_is_scored_on_the_text_its_model_typed` |
+| Unvalidated SQL reaching the database from the agent state | 2 (validated again in `execute`) | `agent/test_nodes.py::test_execute_revalidates_and_never_runs_unvalidated_sql` |
+| Model SQL reads the retrieval index, or the agent role changes it | 2, 5 | `safety/test_validator.py::test_adversarial_sql_is_rejected`, `safety/test_defense_in_depth.py::test_reader_role_cannot_reach_core_secrets_files_or_other_roles` |
+| Runaway cost or loops (LLM calls, tokens, wall time, repairs) | 8 | `agent/test_nodes.py::test_budget_limits`, `agent/test_graph.py::test_llm_call_limit_stops_before_the_answer_call_and_returns_the_table`, `agent/test_graph.py::test_token_limit_stops_the_run`, `agent/test_graph.py::test_time_limit_stops_the_run_cleanly`, `agent/test_graph.py::test_repairs_are_capped_then_the_run_ends_with_an_error` |
 
 ### Threats covered in later phases
 
 | Threat | Layer | Phase |
 |---|---|---|
-| Prompt injection through data (the planted support ticket `TCK-2026-004660`) | 7 | 4 (eval case in Phase 3) |
-| Write intents, personal-data requests, off-topic questions in the question itself | 1 | 4 |
-| Runaway cost or loops (LLM calls, tokens, wall time, repairs) | 8 | 4 |
+| Whether a live model's answer repeats the planted injection (support ticket `TCK-2026-004660`, eval case t056) | 7 | 7 (live test-split run) |
 | Abuse of the public API (rate limit, daily spend cap, kill switch, auth) | 8 | 5 |
 
 ## Cost-limit calibration (2026-10-29)

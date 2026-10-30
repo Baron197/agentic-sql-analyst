@@ -35,6 +35,16 @@ class Settings(BaseSettings):
     anthropic_api_key: SecretStr = SecretStr("")
     openai_api_key: SecretStr = SecretStr("")
 
+    # Agent (Phase 4): per-run budget guard, retrieval embeddings, and the run store.
+    agent_max_llm_calls: int = 8
+    agent_max_tokens: int = 60_000
+    agent_max_cost_usd: float = 0.05
+    agent_max_seconds: float = 60.0
+    agent_max_repairs: int = 3
+    embedding_model: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    embedding_cache_dir: str = ".cache/fastembed"
+    runs_dir: str = "runs"
+
     def admin_conninfo(self) -> str:
         """Connection string for the owner role (schema setup and seeding only, never the agent)."""
         return make_conninfo(

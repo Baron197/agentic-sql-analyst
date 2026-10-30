@@ -46,13 +46,22 @@ jobs:
         run: uv run poe db-ping
       - name: Build schemas and load the seed
         run: uv run poe db-load
-      - name: Check (lint, format, workflow schema, tests)
+      # The local embedding model (~220 MB, Apache-2.0) downloads once, then comes from the cache.
+      - name: Cache the embedding model
+        uses: actions/cache@v6
+        with:
+          path: .cache/fastembed
+          key: fastembed-${{ hashFiles('.env.example') }}
+      - name: Build the retrieval index (pgvector, local embeddings)
+        run: uv run poe index-build
+      - name: Check (lint, format, workflow schema, tests incl. keyless agent end to end)
         run: uv run poe check
       - name: Eval sanity check (gold vs gold, keyless, must be 100%)
         run: uv run poe eval --system gold --split dev,test
       - name: Eval plumbing check (keyless baseline; not a quality measure)
         run: uv run poe eval --system baseline --mode keyless --split dev
-      # Added in later phases: keyless end-to-end agent run (4).
+      - name: Eval plumbing check (keyless agent; safety and grounding gates must pass)
+        run: uv run poe eval --system agent --mode keyless --split dev
 
   # web:    lint, typecheck, test, build (Phase 6)
   # docker: image build (Phase 8)

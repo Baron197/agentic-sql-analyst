@@ -1,4 +1,5 @@
-"""Leakage guard: the few-shot library (data/examples.yaml) must not contain eval questions.
+"""Leakage guard: the few-shot library (data/examples.yaml) and the keyless demo questions
+(data/demo.yaml) must not contain eval questions.
 
 An example leaks if its question nearly matches any dev or test question (normalised text
 similarity >= SIMILARITY_LIMIT) or its SQL equals a gold SQL after normalisation.
@@ -6,38 +7,14 @@ similarity >= SIMILARITY_LIMIT) or its SQL equals a gold SQL after normalisation
 
 import re
 from difflib import SequenceMatcher
-from pathlib import Path
-from typing import Literal
-
-import yaml
-from pydantic import BaseModel, ConfigDict, model_validator
 
 from eval.cases import SPLITS, load_cases
+from sql_analyst.agent.keyless import load_demo
+from sql_analyst.retrieval.examples import Example, load_examples
 
-EXAMPLES_PATH = Path(__file__).resolve().parents[1] / "data" / "examples.yaml"
+__all__ = ["Example", "demo_examples", "find_leaks", "load_examples"]
+
 SIMILARITY_LIMIT = 0.85
-
-
-class Example(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    id: str
-    question: str
-    lang: Literal["en", "id"]
-    decision: Literal["answer", "refuse_unsafe", "refuse_unanswerable"]
-    sql: str | None = None
-    notes: str | None = None
-
-    @model_validator(mode="after")
-    def _sql_iff_answer(self) -> "Example":
-        if (self.decision == "answer") != bool(self.sql):
-            raise ValueError(f"{self.id}: answer examples need sql; refusals must not have it")
-        return self
-
-
-def load_examples(path: Path = EXAMPLES_PATH) -> list[Example]:
-    with path.open(encoding="utf-8") as f:
-        return [Example.model_validate(e) for e in yaml.safe_load(f)]
 
 
 def normalize_text(text: str) -> str:
@@ -50,6 +27,14 @@ def normalize_sql(sql: str) -> str:
 
 def similarity(a: str, b: str) -> float:
     return SequenceMatcher(None, normalize_text(a), normalize_text(b)).ratio()
+
+
+def demo_examples() -> list[Example]:
+    """The keyless demo questions in the same shape as few-shot examples."""
+    return [
+        Example(id=d.id, question=d.question, lang=d.lang, decision=d.expected, sql=d.sql)
+        for d in load_demo()
+    ]
 
 
 def find_leaks(examples: list[Example] | None = None) -> list[str]:

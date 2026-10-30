@@ -5,7 +5,7 @@ from collections import Counter
 import pytest
 
 from eval.cases import SPLITS, load_cases
-from eval.leakage import Example, find_leaks, load_examples
+from eval.leakage import Example, demo_examples, find_leaks, load_examples
 from sql_analyst.dictionary.loader import load_dictionary
 from sql_analyst.safety.validator import SQLValidator
 
@@ -60,6 +60,10 @@ def test_every_example_sql_passes_the_validator(example):
 
 def test_no_example_leaks_an_eval_question():
     assert find_leaks() == []
+
+
+def test_no_keyless_demo_question_leaks_an_eval_question():
+    assert find_leaks(demo_examples()) == []
 
 
 def test_leakage_guard_catches_planted_duplicates():

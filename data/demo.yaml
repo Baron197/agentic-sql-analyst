@@ -1,0 +1,144 @@
+# Keyless demo questions: the agent can answer these with no API key, because the fake LLM
+# replays the SQL and answer template below (agent/keyless.py). Everything else in the run
+# is real: retrieval, the validator, the read-only executor with row-level security, and
+# the code that fills in the numbers. Keyless answers show the plumbing, not model quality.
+# Written independently of the eval set; the leakage test checks they don't overlap.
+
+- id: demo01
+  question: How many orders were placed each month in 2025?
+  lang: en
+  users: [analyst, manager_jakarta]
+  expected: answer
+  assumptions:
+    - Months are WIB calendar months; cancelled orders are included because the question asks about orders placed.
+  sql: |
+    SELECT date_trunc('month', (o.ordered_at AT TIME ZONE 'Asia/Jakarta'))::date AS month,
+           count(*) AS orders
+    FROM analytics.fact_orders o
+    WHERE (o.ordered_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN DATE '2025-01-01' AND DATE '2025-12-31'
+    GROUP BY 1
+    ORDER BY 1
+  template: >-
+    In 2025, {{sum.orders}} orders were placed in total: {{r0.orders}} in the first month
+    ({{r0.month}}) and {{r11.orders}} in the last ({{r11.month}}). The busiest month had
+    {{max.orders}} orders.
+  chart: {type: line, x: month, y: orders}
+
+- id: demo02
+  question: What was net revenue by sales channel in Q1 2026?
+  lang: en
+  users: [analyst, manager_jakarta]
+  expected: answer
+  assumptions:
+    - Q1 2026 is the calendar quarter from 2026-01-01 to 2026-03-31 (WIB), not the fiscal quarter.
+  sql: |
+    WITH order_net AS (
+      SELECT o.order_id, o.channel_id,
+             SUM(oi.quantity * oi.unit_price_idr - oi.discount_idr) AS line_net
+      FROM analytics.fact_orders o
+      JOIN analytics.fact_order_items oi ON oi.order_id = o.order_id
+      WHERE o.status <> 'cancelled'
+        AND (o.ordered_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN DATE '2026-01-01' AND DATE '2026-03-31'
+      GROUP BY o.order_id, o.channel_id
+    ),
+    refunds AS (
+      SELECT r.order_id, SUM(r.refund_amount_idr) AS refunded
+      FROM analytics.fact_returns r
+      GROUP BY r.order_id
+    )
+    SELECT c.channel_name, SUM(n.line_net - COALESCE(f.refunded, 0)) AS net_revenue_idr
+    FROM order_net n
+    JOIN analytics.dim_channel c ON c.channel_id = n.channel_id
+    LEFT JOIN refunds f ON f.order_id = n.order_id
+    GROUP BY c.channel_name
+    ORDER BY net_revenue_idr DESC
+  template: >-
+    In Q1 2026, {{r0.channel_name}} brought in the most net revenue ({{r0.net_revenue_idr}}),
+    followed by {{r1.channel_name}} ({{r1.net_revenue_idr}}). Net revenue across all
+    channels was {{sum.net_revenue_idr}}.
+  chart: {type: bar, x: channel_name, y: net_revenue_idr}
+
+- id: demo03
+  question: Berapa pelanggan baru yang mendaftar setiap bulan selama 2025?
+  lang: id
+  users: [analyst, manager_jakarta]
+  expected: answer
+  assumptions:
+    - Pelanggan baru dihitung dari tanggal pendaftaran (signup_date).
+  sql: |
+    SELECT date_trunc('month', c.signup_date)::date AS month, count(*) AS new_customers
+    FROM analytics.dim_customer c
+    WHERE c.signup_date BETWEEN DATE '2025-01-01' AND DATE '2025-12-31'
+    GROUP BY 1
+    ORDER BY 1
+  template: >-
+    Sepanjang 2025 ada {{sum.new_customers}} pelanggan baru. Rata-rata per bulan
+    {{avg.new_customers}} pendaftar, dengan bulan tertinggi {{max.new_customers}} pendaftar.
+  chart: {type: line, x: month, y: new_customers}
+
+- id: demo04
+  question: Metode pembayaran apa yang paling sering dipakai pada tahun 2026?
+  lang: id
+  users: [analyst, manager_jakarta]
+  expected: answer
+  assumptions:
+    - Dihitung dari pembayaran yang tercatat dibayar pada 2026 (data berakhir September).
+  sql: |
+    SELECT p.payment_method, count(*) AS payments
+    FROM analytics.fact_payments p
+    WHERE (p.paid_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN DATE '2026-01-01' AND DATE '2026-12-31'
+    GROUP BY p.payment_method
+    ORDER BY payments DESC
+  template: >-
+    Pada tahun 2026, metode yang paling sering dipakai adalah {{r0.payment_method}}
+    ({{r0.payments}} pembayaran), diikuti {{r1.payment_method}} ({{r1.payments}}).
+  chart: {type: bar, x: payment_method, y: payments}
+
+- id: demo05
+  question: How many orders did each store get in September 2026?
+  lang: en
+  users: [analyst, manager_jakarta]
+  expected: answer
+  assumptions:
+    - Counts all orders placed in September 2026 (WIB), including cancelled ones.
+  sql: |
+    SELECT s.store_name, count(*) AS orders
+    FROM analytics.fact_orders o
+    JOIN analytics.dim_store s ON s.store_id = o.store_id
+    WHERE (o.ordered_at AT TIME ZONE 'Asia/Jakarta')::date BETWEEN DATE '2026-09-01' AND DATE '2026-09-30'
+    GROUP BY s.store_name
+    ORDER BY orders DESC
+  template: >-
+    In September 2026, {{r0.store_name}} received the most orders ({{r0.orders}}). The
+    {{row_count}} stores you can see received {{sum.orders}} orders in total.
+  chart: {type: bar, x: store_name, y: orders}
+
+- id: demo06
+  question: What share of support tickets came in through each contact channel?
+  lang: en
+  users: [analyst, manager_jakarta]
+  expected: answer
+  assumptions:
+    - Uses all tickets in the data window.
+  sql: |
+    SELECT t.contact_channel, count(*) AS tickets,
+           ROUND(count(*)::numeric / SUM(count(*)) OVER (), 4) AS ticket_share
+    FROM analytics.fact_support_tickets t
+    GROUP BY t.contact_channel
+    ORDER BY tickets DESC
+  template: >-
+    {{r0.contact_channel}} is the most used contact channel, with {{r0.ticket_share}} of
+    tickets ({{r0.tickets}}), followed by {{r1.contact_channel}} ({{r1.ticket_share}}).
+  chart: {type: bar, x: contact_channel, y: ticket_share}
+
+- id: demo07
+  question: Delete all orders from 2024.
+  lang: en
+  users: [analyst, manager_jakarta]
+  expected: refuse_unsafe
+
+- id: demo08
+  question: Tampilkan alamat email semua pelanggan.
+  lang: id
+  users: [analyst, manager_jakarta]
+  expected: refuse_unsafe

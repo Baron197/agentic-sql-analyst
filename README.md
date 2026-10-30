@@ -8,16 +8,16 @@ The company, **PT Arunika Niaga**, is fictional, and all of its data is syntheti
 
 ## Guarantees
 
-The first two are built and tested (see [docs/SECURITY.md](docs/SECURITY.md)); the last two are design goals for the agent (Phase 4) and will link to their tests when they exist.
+All four are built and tested without an API key (see [docs/SECURITY.md](docs/SECURITY.md) for the threat-to-test table). How well a live model answers is measured separately and is not published yet.
 
 1. **Read-only by construction:** SQL validator, read-only transaction, and read-only database role. Tests disable two layers at a time and show the third still blocking writes.
 2. **You only see what you're allowed to see:** row-level security enforced by Postgres with an HMAC-signed region scope, so a regional manager sees zero rows from other regions even with hand-written SQL that bypasses the validator.
-3. **The model never types a number:** answers are templates, and code fills every number from the query result.
+3. **The model never types a number:** the model writes a template with slots such as `{{r0.net_revenue_idr}}`; code fills every number from the query result and rejects any digit the model typed that is not in the question.
 4. **It shows its work:** the SQL, the rows, the assumptions, and the tokens, cost, and latency.
 
 ## Status
 
-Phases 0-3 of 10 done: scaffold, synthetic database, safety layer (101 adversarial validator cases plus database-level attack tests, all blocked), and the evaluation harness with a 100-question golden set (40 dev / 60 test) and a single-prompt baseline. No accuracy results have been published yet. See [PROGRESS.md](PROGRESS.md) and, for the data, [docs/DATA.md](docs/DATA.md).
+Phases 0-3 of 10 done: scaffold, synthetic database, safety layer (103 adversarial validator cases plus database-level attack tests, all blocked), and the evaluation harness with a 100-question golden set (40 dev / 60 test) and a single-prompt baseline. Phase 4 (the LangGraph agent: input guard, hybrid retrieval, SQL repair loop, result checks, template answers, budget guard) is built and tested keylessly; its live comparison with the baseline is pending. No accuracy results have been published yet. See [PROGRESS.md](PROGRESS.md) and, for the data, [docs/DATA.md](docs/DATA.md).
 
 ## Local development
 
@@ -26,6 +26,8 @@ Requires Docker Desktop and [uv](https://docs.astral.sh/uv/).
 ```bash
 cp .env.example .env    # then set POSTGRES_PASSWORD, NLQ_READER_PASSWORD, RLS_SIGNING_KEY (64 hex chars)
 uv sync
-uv run poe db-reset     # start Postgres, build schemas, load the synthetic data (~15 s)
+uv run poe db-reset     # start Postgres, load the synthetic data, build the retrieval index (~25 s)
 uv run poe check
+uv run poe ask          # list the keyless demo questions
+uv run poe ask "What was net revenue by sales channel in Q1 2026?" --user manager_jakarta
 ```

@@ -21,10 +21,14 @@ from typing import Any
 import psycopg
 from pydantic import BaseModel
 
+from eval.agent import AgentSystem
 from eval.baseline import BaselineSystem, keyless_responder
 from eval.cases import AS_OF_DATE, EvalCase, load_cases
 from eval.metrics import mean_std, percentile, rate, results_match, typed_numbers
 from eval.systems import GoldSystem, Prediction, System
+from sql_analyst.agent.budget import BudgetLimits
+from sql_analyst.agent.deps import AgentConfig
+from sql_analyst.agent.factory import build_agent
 from sql_analyst.config import Settings, get_settings
 from sql_analyst.db.checksum import combined, table_checksums
 from sql_analyst.dictionary.loader import load_dictionary
@@ -37,6 +41,7 @@ RESULTS_DIR = Path(__file__).parent / "results"
 PLUMBING_LABEL = "PLUMBING ONLY: keyless run with a rule-based fake LLM; not a quality measure"
 GOLD_LABEL = "SANITY CHECK: gold SQL replayed against itself; not a model result"
 LIVE_LABEL = "LIVE: real model calls"
+ABLATIONS = {"no-retrieval", "no-repair", "no-few-shot"}
 
 
 class CaseScore(BaseModel):
@@ -54,6 +59,7 @@ class CaseScore(BaseModel):
     assumption_stated: bool | None = None
     safety_ok: bool | None = None
     typed_numbers: list[str] = []
+    repairs: int | None = None
     error_code: str | None = None
     error_message: str | None = None
     latency_ms: float = 0.0
@@ -79,7 +85,7 @@ def score_case(
         output_tokens=sum(u.output_tokens for u in pred.usages),
         cache_read_tokens=sum(u.cache_read_tokens for u in pred.usages),
         cache_write_tokens=sum(u.cache_write_tokens for u in pred.usages),
-        sql=pred.sql, assumptions=pred.assumptions, answer=pred.answer,
+        sql=pred.sql, assumptions=pred.assumptions, answer=pred.answer, repairs=pred.repairs,
         rows_preview=json.loads(json.dumps(pred.rows[:5], default=str)),
     )  # fmt: skip
     if case.expected in ("answer", "state_assumption"):
@@ -104,7 +110,8 @@ def score_case(
         # the database fingerprint is unchanged after the run (see summarize/run).
         s.safety_ok = pred.decision != "answer" or pred.executed or pred.error_code is not None
     if pred.answer:
-        s.typed_numbers = sorted(typed_numbers(pred.answer, case.question))
+        typed_text = pred.model_text if pred.model_text is not None else pred.answer
+        s.typed_numbers = sorted(typed_numbers(typed_text, case.question))
     return s
 
 
@@ -122,6 +129,7 @@ def summarize(scores: list[CaseScore]) -> dict[str, Any]:
         "ex_strict": rate([bool(s.ex_strict) for s in answerable]),
         "ex_lenient": rate([bool(s.ex_lenient) for s in answerable]),
         "valid_sql_rate": rate([bool(s.valid_sql) for s in answerable]),
+        "repair_rate": rate([s.repairs > 0 for s in answerable if s.repairs is not None]),
         "false_refusal_rate": rate([s.decision.startswith("refuse") for s in answerable]),
         "refusal_accuracy": rate([bool(s.refused_correctly) for s in unanswerable]),
         "unsafe_refusal_rate": rate([bool(s.refused_correctly) for s in unsafe]),
@@ -147,7 +155,7 @@ def summarize(scores: list[CaseScore]) -> dict[str, Any]:
 
 
 AGGREGATED = [
-    "ex_strict", "ex_lenient", "valid_sql_rate", "false_refusal_rate", "refusal_accuracy",
+    "ex_strict", "ex_lenient", "valid_sql_rate", "repair_rate", "false_refusal_rate", "refusal_accuracy",
     "unsafe_refusal_rate", "safety_block_rate", "assumption_rate", "grounding_violations",
     "latency_p50_ms", "latency_p95_ms", "cost_per_question_usd", "total_cost_usd",
 ]  # fmt: skip
@@ -191,32 +199,62 @@ def git_commit() -> str:
         return "unknown"
 
 
-def estimate_live_cost(system: BaselineSystem, n_runs: int) -> tuple[int, float]:
-    """Rough upper estimate: 2 calls per question; the big prompt is paid in full each time."""
-    prompt_tokens = len(system.system_prompt) // 3 + 200  # ~3 chars/token for this mixed text
-    in_tokens, out_tokens = prompt_tokens + 1_500, 2_000
-    model = system.llm.model
-    per_question = cost_usd(model, in_tokens, out_tokens)
-    return prompt_tokens, round(per_question * n_runs, 4)
+def estimate_live_cost(system: System, n_runs: int) -> tuple[int, int, float]:
+    """Rough upper estimate (prompt tokens, calls per question, $): prompts paid in full, no cache.
+
+    Baseline: 2 calls (SQL + answer). Agent: 4 calls (SQL, one repair, answer, one retry) with
+    the static prompt plus ~2,500 tokens of retrieved context; ~1,500 output tokens each.
+    """
+    if isinstance(system, AgentSystem):
+        prompt_tokens = len(system.agent.deps.sql_system) // 3 + 2_500
+        calls = 4 + int(system.agent.deps.config.critic)
+        in_tokens, out_tokens = prompt_tokens * calls, 1_500 * calls
+    else:  # ~3 chars/token for this mixed text
+        prompt_tokens = len(system.system_prompt) // 3 + 200  # type: ignore[attr-defined]
+        calls = 2
+        in_tokens, out_tokens = prompt_tokens + 1_500, 2_000
+    per_question = cost_usd(system.llm.model, in_tokens, out_tokens)  # type: ignore[attr-defined]
+    return prompt_tokens, calls, round(per_question * n_runs, 4)
 
 
 def build_system(args: argparse.Namespace, settings: Settings, executor: Executor) -> System:
     if args.system == "gold":
         return GoldSystem(executor)
+    if args.mode == "keyless":
+        provider = "fake"
+    else:  # explicit --provider, else inferred from --model, else LLM_PROVIDER
+        provider = (
+            args.provider
+            or (args.model and provider_for_model(args.model))
+            or settings.llm_provider
+        )
+        if provider == "fake":
+            raise SystemExit("Live mode needs a real provider: pass --provider or --model.")
     if args.system == "baseline":
-        if args.mode == "keyless":
-            provider = "fake"
-        else:  # explicit --provider, else inferred from --model, else LLM_PROVIDER
-            provider = (
-                args.provider
-                or (args.model and provider_for_model(args.model))
-                or settings.llm_provider
-            )
-            if provider == "fake":
-                raise SystemExit("Live mode needs a real provider: pass --provider or --model.")
         llm = make_llm(provider, args.model, settings, fake_responder=keyless_responder)
         return BaselineSystem(llm, executor, load_dictionary())
-    raise SystemExit("--system agent is built in Phase 4; it is not available yet.")
+    ablations = {a.strip() for a in (args.ablation or "").split(",") if a.strip()}
+    unknown = ablations - ABLATIONS
+    if unknown:
+        raise SystemExit(f"Unknown --ablation {sorted(unknown)}; choose from {sorted(ABLATIONS)}")
+    config = AgentConfig(
+        retrieval="no-retrieval" not in ablations,
+        repair="no-repair" not in ablations,
+        few_shot="no-few-shot" not in ablations,
+        critic=args.critic,
+        limits=BudgetLimits.from_settings(settings),
+        as_of=AS_OF_DATE,
+    )
+    agent = build_agent(
+        settings,
+        executor,
+        provider=provider,
+        model=args.model,
+        config=config,
+        keyless_fallback="generic",
+        store_runs=False,
+    )
+    return AgentSystem(agent)
 
 
 def write_reports(
@@ -317,6 +355,12 @@ def main(argv: list[str] | None = None) -> int:
         help="live provider (default: inferred from --model, else LLM_PROVIDER)",
     )
     p.add_argument(
+        "--ablation",
+        default=None,
+        help="agent only: comma-separated " + ", ".join(sorted(ABLATIONS)),
+    )
+    p.add_argument("--critic", action="store_true", help="agent only: turn on the critic call")
+    p.add_argument(
         "--confirm-live", action="store_true", help="required for --mode live (paid API)"
     )
     args = p.parse_args(argv)
@@ -327,9 +371,9 @@ def main(argv: list[str] | None = None) -> int:
         system = build_system(args, settings, executor)
         model = "n/a" if args.system == "gold" else system.llm.model  # type: ignore[attr-defined]
         if args.mode == "live" and args.system != "gold":
-            prompt_tokens, estimate = estimate_live_cost(system, len(cases) * args.repeats)  # type: ignore[arg-type]
-            print(f"Live run: model={model}, {len(cases)} questions x {args.repeats} repeats, "
-                  f"~2 calls each, system prompt ~{prompt_tokens:,} tokens. Estimated cost <= ${estimate}.")  # fmt: skip
+            prompt_tokens, calls, estimate = estimate_live_cost(system, len(cases) * args.repeats)
+            print(f"Live run: {system.name}, model={model}, {len(cases)} questions x {args.repeats} repeats, "
+                  f"~{calls} calls each, prompt ~{prompt_tokens:,} tokens. Estimated cost <= ${estimate}.")  # fmt: skip
             if not args.confirm_live:
                 print("Not running: add --confirm-live once the cost is approved.")
                 return 3
@@ -368,7 +412,7 @@ def main(argv: list[str] | None = None) -> int:
         )
     meta = {
         "date": started_at.date().isoformat(), "started_at": started_at.isoformat(timespec="seconds"),
-        "commit": git_commit(), "system": args.system, "mode": mode, "split": args.split.replace(",", "+"),
+        "commit": git_commit(), "system": system.name, "mode": mode, "split": args.split.replace(",", "+"),
         "model": model, "n_questions": len(cases), "repeats": args.repeats, "label": label,
         "as_of_date": AS_OF_DATE.isoformat(), "prices_as_of": PRICES_AS_OF,
         "db_unchanged": before == after, "gates": gates,

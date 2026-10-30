@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from eval.cases import AS_OF_DATE, EvalCase
 from eval.systems import Prediction, execute_into
 from sql_analyst.dictionary.models import Dictionary
+from sql_analyst.dictionary.render import render_dictionary
 from sql_analyst.llm.base import LLMClient, LLMError, Message
 from sql_analyst.safety.executor import Executor
 
@@ -40,40 +41,6 @@ class SQLDecision(BaseModel):
 
 class FinalAnswer(BaseModel):
     answer: str = Field(description="A short answer in the language of the question")
-
-
-def render_dictionary(d: Dictionary) -> str:
-    """The whole semantic layer as compact text: rules, views, columns, joins, glossary."""
-    out = [
-        f"Company: {d.company}",
-        f"Data window: {d.data_window.start} to {d.data_window.end}. {d.data_window.note}",
-    ]
-    out.append("\nBusiness rules:")
-    out += [f"- {r}" for r in d.business_rules]
-    out.append("\nViews (schema analytics):")
-    for v in d.views:
-        syn = ", ".join(v.synonyms.all())
-        out.append(
-            f"\n## analytics.{v.name}: {v.description} Grain: {v.grain}. Also called: {syn}."
-        )
-        for c in v.columns:
-            extra = []
-            if c.examples:
-                extra.append("values e.g. " + ", ".join(c.examples))
-            if c.synonyms.all():
-                extra.append("aka " + ", ".join(c.synonyms.all()))
-            if c.deprecated:
-                extra.append("DEPRECATED: " + c.deprecated)
-            tail = f" ({'; '.join(extra)})" if extra else ""
-            out.append(f"- {c.name} {c.type}: {c.description}{tail}")
-    out.append("\nJoin paths:")
-    out += [f"- {j.from_} = {j.to}" + (f" ({j.note})" if j.note else "") for j in d.join_paths]
-    out.append("\nGlossary metrics (canonical SQL):")
-    for m in d.glossary:
-        out.append(
-            f"\n### {m.name} ({m.label.en} / {m.label.id}): {m.description}\n{m.sql.strip()}"
-        )
-    return "\n".join(out)
 
 
 SQL_INSTRUCTIONS = """You are a data analyst for PT Arunika Niaga (a fictional retailer). Translate the
