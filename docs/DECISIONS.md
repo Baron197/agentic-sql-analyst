@@ -281,3 +281,23 @@ Short entries, newest last: context, decision, why, alternatives considered.
 - **Decision:** `Agent.stream()` uses LangGraph's `stream_mode="updates"` and yields each node's timing as the node finishes; `api/streaming.py` formats server-sent events by hand and FastAPI's `StreamingResponse` sends them. A run that ends with status `error`, or a crash mid-stream, becomes an `error` event (the HTTP status is already 200).
 - **Why:** no extra dependency (sse-starlette), and the step events arrive live rather than all at the end.
 - **Note:** the request log line for a stream is written when the headers go out; a separate "ask finished" line carries the run id and status.
+
+## D036: One-click demo sign-in instead of printing demo passwords (2026-10-30, Phase 6)
+
+- **Context:** BUILD_GUIDE §10-11 says the public demo shows the demo credentials on the sign-in page.
+- **Decision:** `GET /api/auth/options` lists the demo accounts (emails and roles). With `DEMO_LOGIN_ENABLED=true` (public demo only; default false), `POST /api/auth/demo {"user": "analyst" | "manager_jakarta"}` signs in as that seeded user, and the page shows "Try as analyst / manager" buttons. The normal password sign-in stays.
+- **Why:** visitors get the same one-click access, and the demo passwords never appear in the page, the JavaScript bundle, or screenshots. The rate limit and daily budget still apply per user.
+- **Alternatives:** print the passwords (the guide's version: they leak into every screenshot and copy of the page).
+
+## D037: Web toolchain versions (2026-10-30, Phase 6)
+
+- **Decision:** React 19.3, Vite 8.3, Tailwind 4.3 (`@tailwindcss/vite`), Recharts 3.10, React Router 8.5, Vitest 5.0 + Testing Library + jsdom, Playwright 1.64, ESLint 10 + typescript-eslint 8.72, Prettier 3.9. **TypeScript is pinned to 6.0.x (`~6.0.3`), not 7.0**: typescript-eslint 8.72 supports TypeScript below 6.1 only (its peer range), checked with `npm view` on 2026-10-30.
+- **Also:** fonts are self-hosted from `@fontsource` (Latin subsets only: Indonesian needs no other), so the app makes no request to Google Fonts; Recharts loads only when a bar or line chart is shown (its own 107 kB gzipped chunk); the main bundle is 93 kB gzipped.
+
+## D038: The web app follows the API's choices (2026-10-30, Phase 6)
+
+- **Decision:**
+  - the chart type comes from the API (`chart`: kpi, bar, line, or table), which already checks it against the result's shape (D029). The app only draws it, with no entry animation: a half-drawn bar shows a wrong value (a screenshot caught one at 55%), and it respects reduced motion;
+  - the table shows raw values with thousands separators (ids and years unchanged); the answer text keeps the agent's locale formatting; CSV keeps raw values, and cells starting with `=`, `+`, `-`, or `@` get a leading `'` so spreadsheets don't run them as formulas (result rows can contain untrusted text);
+  - the stream is read with `fetch` and a small SSE parser (EventSource can't POST); the dev server proxies `/api`, so the app and the API share an origin and the cookie works without CORS. Steps arrive one by one through the proxy (checked: the first step at 128 ms, the next at 1,654 ms while the embedding model loaded);
+  - dark theme only, with the colours and fonts of Baron's portfolio site.

@@ -1,4 +1,9 @@
-"""POST /api/auth/login, POST /api/auth/logout, GET /api/me."""
+"""Sign-in routes: login, logout, me, and the public demo's one-click sign-in.
+
+`POST /api/auth/demo` signs in as a seeded demo user without a password. It exists only when
+DEMO_LOGIN_ENABLED=true (the public demo, Phase 8), so the demo passwords never need to be
+shown on the page or shipped in the JavaScript (docs/DECISIONS.md D036).
+"""
 
 from fastapi import APIRouter, Request, Response
 
@@ -11,7 +16,8 @@ from sql_analyst.api.auth import (
     verify_password,
 )
 from sql_analyst.api.deps import api_error
-from sql_analyst.api.models import LoginRequest, Me
+from sql_analyst.api.models import AuthOptions, DemoLoginRequest, LoginRequest, Me
+from sql_analyst.users import DEMO_USERS
 
 router = APIRouter(prefix="/api", tags=["auth"])
 
@@ -55,4 +61,28 @@ def logout(response: Response, res: Res) -> Response:
 
 @router.get("/me", response_model=Me)
 def me(user: CurrentUser) -> Me:
+    return _me(user)
+
+
+@router.get("/auth/options", response_model=AuthOptions)
+def auth_options(res: Res) -> AuthOptions:
+    """What the sign-in page can offer: the demo accounts and whether one-click sign-in is on."""
+    return AuthOptions(
+        demo_login_enabled=res.settings.demo_login_enabled,
+        demo_users=[
+            {"key": key, "email": scope.user_id, "role": scope.role}
+            for key, scope in DEMO_USERS.items()
+        ],
+    )
+
+
+@router.post("/auth/demo", response_model=Me)
+def demo_login(body: DemoLoginRequest, request: Request, response: Response, res: Res) -> Me:
+    if not res.settings.demo_login_enabled:
+        raise api_error(404, "not_found", "Not found.")
+    user = res.store.user(DEMO_USERS[body.user].user_id)
+    if user is None:
+        raise api_error(503, "demo_users_missing", "The demo users are not set up.")
+    request.state.user_id = user.user_id
+    set_session_cookie(response, issue_token(user.user_id, res), res)
     return _me(user)

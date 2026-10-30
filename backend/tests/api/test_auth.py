@@ -106,3 +106,19 @@ def test_passwords_are_stored_as_argon2id_hashes(resources):
     user = resources.store.user(ANALYST)
     assert user.password_hash.startswith("$argon2id$")
     assert PasswordHasher().verify(user.password_hash, password(ANALYST))
+
+
+def test_auth_options_are_public_and_list_the_demo_accounts(client):
+    body = client.get("/api/auth/options").json()
+    assert body["demo_login_enabled"] is False
+    assert [u["email"] for u in body["demo_users"]] == [ANALYST, MANAGER]
+
+
+def test_one_click_demo_sign_in_only_when_enabled(client, override):
+    r = client.post("/api/auth/demo", json={"user": "manager_jakarta"})
+    assert r.status_code == 404 and COOKIE not in client.cookies
+    override(demo_login_enabled=True)
+    r = client.post("/api/auth/demo", json={"user": "manager_jakarta"})
+    assert r.status_code == 200 and r.json()["region_ids"] == [1, 2, 3, 4, 5]
+    assert client.get("/api/me").json()["user_id"] == MANAGER
+    assert client.post("/api/auth/demo", json={"user": "admin"}).status_code == 422

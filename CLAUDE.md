@@ -52,7 +52,11 @@ Portfolio project by Baron Purwa Hartono (AI Engineer). An agentic natural-langu
   - `uv run poe db-ping`: connect and check the server version and pgvector.
   - `uv run poe eval --system gold|baseline|agent --mode keyless|live --split dev|test|dev,test [--repeats N] [--limit N] [--model M] [--ablation no-retrieval,no-repair,no-few-shot] [--critic]`: eval harness; results in `eval/results/`. Live mode prints a cost estimate and needs `--confirm-live` and Baron's OK first.
   - `uv run poe ask "…" [--user analyst|manager_jakarta] [--mode keyless|live --model M] [--json]`: ask the agent. Keyless (default) answers the demo questions in `data/demo.yaml`; `uv run poe ask` with no question lists them. Live mode is a paid call. Runs are saved to `runs/` (gitignored).
-  - Web dev server: added in Phase 6.
+  - `uv run poe web-install`: `npm ci` in `web/` (Node LTS; TypeScript pinned to 6.0, D037).
+  - `uv run poe web`: the web app on http://127.0.0.1:5173 (proxies `/api` to `poe api`; run both).
+  - `uv run poe web-check`: web lint, Prettier check, typecheck, Vitest, build. Run before every commit that touches `web/`.
+  - `uv run poe web-e2e`: Playwright smoke test (starts `poe api` and the web server if needed; Postgres must be up). `uv run poe web-screenshots` writes `docs/screenshots/`.
+  - One-time: `npx --prefix web playwright install chromium`.
 - Never print the demo passwords, `JWT_SECRET`, or other `.env` values in the chat or in docs; read them into shell variables.
 - Local `.env` is created from `.env.example`; Docker Desktop must be running for any `db-*` task.
 - Use `127.0.0.1`, never `localhost`, for the database host on this machine: `localhost` resolves to IPv6 first and each connection hangs ~130 s (docs/DECISIONS.md D006).

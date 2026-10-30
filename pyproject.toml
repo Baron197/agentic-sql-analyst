@@ -102,6 +102,26 @@ help = "Ask the agent a question: keyless by default (--mode live --model M for 
 cmd = "sql-analyst ask"
 env = { HF_HUB_DISABLE_SYMLINKS_WARNING = "1" }
 
+[tool.poe.tasks.web-install]
+help = "Install the web app's packages from package-lock.json (npm ci)"
+shell = "npm --prefix web ci"
+
+[tool.poe.tasks.web]
+help = "Run the web app on http://127.0.0.1:5173 (proxies /api to `poe api`)"
+shell = "npm --prefix web run dev"
+
+[tool.poe.tasks.web-check]
+help = "Web app: lint, format check, typecheck, unit tests, build"
+shell = "npm --prefix web run check"
+
+[tool.poe.tasks.web-e2e]
+help = "Playwright smoke test (starts `poe api` and the web dev server if they aren't running)"
+shell = "npm --prefix web run e2e"
+
+[tool.poe.tasks.web-screenshots]
+help = "Screenshots of the sign-in and Ask pages at 375 px and 1280 px into docs/screenshots/"
+shell = "npm --prefix web run screenshots"
+
 [tool.poe.tasks.eval]
 help = "Run the evaluation harness: --system gold|baseline --mode keyless|live --split dev|test (see eval/run_eval.py)"
 cmd = "python -m eval.run_eval"

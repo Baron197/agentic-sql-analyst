@@ -1,6 +1,6 @@
 """Request and response bodies (BUILD_GUIDE §10)."""
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -21,6 +21,21 @@ class Me(BaseModel):
     display_name: str
     role: str
     region_ids: list[int] | None  # None = all regions
+
+
+class DemoUser(BaseModel):
+    key: str
+    email: str
+    role: str
+
+
+class AuthOptions(BaseModel):
+    demo_login_enabled: bool
+    demo_users: list[DemoUser]
+
+
+class DemoLoginRequest(BaseModel):
+    user: Literal["analyst", "manager_jakarta"]
 
 
 class AskRequest(BaseModel):

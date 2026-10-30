@@ -12,7 +12,7 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 | 3 Eval harness, golden set, baseline | **done** (2026-10-30) | all DoD items pass; see session log |
 | 4 Agent core | **done** (2026-10-30) | all DoD items pass; see session log |
 | 5 API | **done** (2026-10-30) | all DoD items pass; see session log |
-| 6 Web app | not started | next |
+| 6 Web app | **in progress** | all DoD items pass except Baron's review of the 375 px / 1280 px screenshots (`docs/screenshots/`) |
 | 7 Real-mode evaluation | not started | needs Baron's budget OK |
 | 8 Deploy | not started | |
 | 9 Portfolio packaging | not started | |
@@ -45,15 +45,43 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 
 ## Next step
 
-Phase 6: Web app (BUILD_GUIDE §11 and §13), only when Baron says so. Start with a plan covering:
-- React + TypeScript + Vite + Tailwind + Recharts in `web/`; pages Login (shows demo credentials only on the public demo, Phase 8), Ask, History, Data dictionary, About (how it works, the four guarantees, the fictional-data notice);
-- the Ask page: example questions from `/api/examples`, a live step timeline from `/api/ask/stream` (fetch + ReadableStream, since EventSource can't POST), the answer card with assumption badges and "numbers filled from the query result", the SQL panel, a sortable paginated table with CSV download, the auto chart (the API already sends one: kpi / bar / line / table), and run details;
-- dev server proxying `/api` to `poe api` (same origin, so the cookie works without CORS); dark theme; 375 px and 1280 px; keyboard access; Vitest + one Playwright smoke test; CI web job (lint, typecheck, test, build).
-- Still open from Phase 4: why the agent costs about twice the baseline, and Baron's spot-check of the d019, d027, d029 gold answers.
+1. **Baron reviews the screenshots** in `docs/screenshots/` (Ask and sign-in pages at 1280 px and 375 px; regenerate with `uv run poe web-screenshots`). Apply any changes he asks for, re-run `uv run poe web-check` and `uv run poe web-e2e`, then mark Phase 6 done and commit.
+2. Then Phase 7: real-mode evaluation and hardening (BUILD_GUIDE §13), only when Baron says so and with his budget OK. Start with a plan covering:
+   - candidate models (2-3) and the cost estimate for the test split × 3 repeats, plus the ablations (no retrieval, no repair, no few-shot, critic on) on dev or test;
+   - the open items from Phase 4: why the agent costs about twice the baseline (cache writes), and Baron's spot-check of the d019, d027, d029 gold answers;
+   - t056 (does a live answer repeat the planted injection?);
+   - `docs/EVAL_RESULTS.md`, with every number taken from a committed `eval/results/` file.
 
 ## Session log
 
 _(newest first: date, what was done, decisions, issues)_
+
+### 2026-10-30: Phase 6 web app (built; screenshot review pending)
+
+**Built** (`web/`, React 19 + TypeScript 6.0 + Vite 8 + Tailwind 4 + Recharts 3)
+- Pages: sign-in (demo accounts listed; "Try as analyst / manager" buttons when `DEMO_LOGIN_ENABLED=true`), Ask, History (+ run detail), Data dictionary (searchable), About (how it works, the four guarantees, what this is and isn't). The fictional-data notice is in every page footer.
+- Ask page:
+  - demo questions from `/api/examples` and the question box (Enter to ask, 500-character counter);
+  - a live step timeline from `/api/ask/stream` (fetch + SSE parser), announced to screen readers;
+  - the answer card with "Numbers filled from the query result", assumption badges, caveats, and refusal reasons;
+  - the auto chart (KPI / bar / line from the API's choice; Recharts loaded on demand, no animation);
+  - the SQL panel (laid out by clause, copy button);
+  - a sortable, paginated table with CSV download (formula-injection guard);
+  - run details (model, tokens, cost, latency, repairs, keyless badge).
+- Theme: Baron's portfolio colours and fonts (self-hosted, Latin subsets). Keyboard accessible (skip link, focus rings, labelled controls, `aria-sort`); loading, empty, and error states.
+- API: `GET /api/auth/options` and `POST /api/auth/demo` (only with `DEMO_LOGIN_ENABLED=true`, D036), with 2 new tests.
+- Tasks: `poe web-install`, `web`, `web-check`, `web-e2e`, `web-screenshots`. CI: a `web` job (lint, Prettier, typecheck, Vitest, build) and the Playwright smoke test in the backend job.
+
+**Decisions:** D036 (one-click demo sign-in), D037 (toolchain; TypeScript pinned to 6.0 for typescript-eslint), D038 (the app follows the API's chart choice; no chart animation; CSV guard; SSE over fetch).
+
+**Found and fixed while building:** descending sort put NULLs first (a Vitest test caught it); chart bars were captured half-drawn in a screenshot (animation now off); the email placeholder looked like a filled-in value.
+
+**DoD evidence**
+- `uv run poe web-check`: ESLint (0 warnings), Prettier, `tsc`, Vitest 24 passed (SSE parser incl. split UTF-8, CSV guard, SQL layout, run state, table sort/pagination, answer card, charts, Ask page with a mocked stream, sign-in errors and demo buttons), `vite build` OK (main bundle 93 kB gzipped, charts 107 kB loaded on demand).
+- `uv run poe web-e2e`: the Playwright smoke test passes (sign in → ask a keyless demo question → steps, SQL, a 4-row table, and the answer appear). It runs against the Postgres container plus `poe api` and the Vite dev server; the fully containerised stack comes in Phase 8 (plan default 1).
+- Streaming through the Vite proxy is incremental: with a cold API, the first `step` event arrived at 128 ms and the next at 1,654 ms (while the embedding model loaded), then the rest within 0.35 s.
+- `REQUIRE_DB=1 uv run poe check`: 728 passed (726 before + 2 demo sign-in tests).
+- Screenshots at 1280 px and 375 px: `docs/screenshots/ask-desktop-1280.png`, `ask-mobile-375.png`, `login-*.png`. **Pending: Baron's review.**
 
 ### 2026-10-30: Phase 5 API (completed)
 

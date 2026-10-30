@@ -56,6 +56,7 @@ class Settings(BaseSettings):
     rate_limit_per_minute: int = 10  # questions per user
     daily_budget_usd: float = 1.0  # live spend per day (WIB), all users together
     live_mode_enabled: bool = False  # kill switch for paid model calls
+    demo_login_enabled: bool = False  # one-click demo sign-in (public demo only)
 
     def admin_conninfo(self) -> str:
         """Connection string for the owner role (schema setup and seeding only, never the agent)."""

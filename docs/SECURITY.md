@@ -75,6 +75,8 @@ Reference data (calendar, regions, channels, categories, products, suppliers, pr
 - **Run history.** `GET /api/runs` and `/api/runs/{id}` filter by the signed-in user; another user's run is a 404, the same as a missing one.
 - **Run store role.** `app_writer` can read `app.users` and insert into `app.runs`, nothing else: no update or delete, and no access to `analytics`, `core`, `rls`, or `retrieval`. `nlq_reader` stays read-only and cannot read `app`.
 - **Spend.** In front of every question: the kill switch (`LIVE_MODE_ENABLED=false` with a paid provider configured → 503), the per-user rate limit (10 per minute → 429), and the daily budget (`DAILY_BUDGET_USD`, summed over today's stored runs in WIB → 429). Questions already running when the budget is reached still finish, so the cap can be overshot by at most one run's budget ($0.05) per question in flight.
+- **Demo sign-in.** `POST /api/auth/demo` exists only with `DEMO_LOGIN_ENABLED=true` (the public demo); otherwise it is a 404. It signs in as a seeded demo user, so no password is shown in the page (D036).
+- **Web app.** The session cookie is never readable by scripts. React escapes all text it renders (no raw HTML anywhere), so result rows can't inject markup. CSV downloads prefix cells starting with `=`, `+`, `-`, or `@` with `'` so spreadsheets don't run them as formulas (Vitest: `web/src/lib/lib.test.ts`). Fonts and scripts are self-hosted: the app loads nothing from third-party origins.
 - **Logs.** One JSON line per request (request id, path, status, latency, user id, run id). Questions, answers, passwords, cookies, and tokens are never logged.
 
 Demo scopes (users seeded by `poe app-setup`): `analyst@demo` = `all`; `manager.jakarta@demo` = the Jabodetabek region group (region IDs 1-5: Jakarta, Bogor, Depok, Tangerang, Bekasi).
@@ -109,6 +111,7 @@ Every threat maps to at least one test. Paths are relative to `backend/tests/`; 
 | Using the API without signing in, or with a forged, expired, or foreign session | API auth | `api/test_auth.py::test_every_route_but_health_and_login_needs_a_session`, `api/test_auth.py::test_forged_expired_or_foreign_tokens_are_rejected` |
 | Password guessing and account probing | API auth | `api/test_auth.py::test_wrong_password_and_unknown_email_get_the_same_answer`, `api/test_auth.py::test_repeated_failures_lock_the_email_for_a_minute`, `api/test_auth.py::test_passwords_are_stored_as_argon2id_hashes` |
 | Session cookie readable by scripts or sent cross-site | API auth | `api/test_auth.py::test_login_sets_an_httponly_samesite_cookie_and_me_returns_the_scope` |
+| Passwordless demo sign-in left on outside the public demo | API auth | `api/test_auth.py::test_one_click_demo_sign_in_only_when_enabled`, `api/test_auth.py::test_auth_options_are_public_and_list_the_demo_accounts` |
 | A manager reads another region's rows through the API (answers and the stream) | 6 | `api/test_ask.py::test_manager_sees_only_jakarta_region_stores`, `api/test_ask.py::test_stream_sends_events_in_order` |
 | Reading another user's question history | API | `api/test_runs_and_reference.py::test_runs_are_stored_and_listed_for_their_owner_only` |
 | The API's run-store login reads data or rewrites history | role design | `api/test_runs_and_reference.py::test_the_run_store_role_can_only_read_users_and_append_runs` |

@@ -15,9 +15,13 @@ All four are built and tested without an API key (see [docs/SECURITY.md](docs/SE
 3. **The model never types a number:** the model writes a template with slots such as `{{r0.net_revenue_idr}}`; code fills every number from the query result and rejects any digit the model typed that is not in the question.
 4. **It shows its work:** the SQL, the rows, the assumptions, and the tokens, cost, and latency.
 
+![The Ask page: a keyless demo answer with its chart, SQL, rows, steps, and run details](docs/screenshots/ask-desktop-1280.png)
+
+_Keyless demo run on synthetic data: a rule-based stand-in replays the demo question; retrieval, validation, the read-only database login, row-level security, and number rendering are real._
+
 ## Status
 
-Phases 0-5 of 10 done: scaffold, synthetic database, safety layer (103 adversarial validator cases plus database-level attack tests, all blocked), the evaluation harness with a 100-question golden set (40 dev / 60 test) and a single-prompt baseline, the LangGraph agent (input guard, hybrid retrieval, SQL repair loop, result checks, template answers, budget guard), and the FastAPI API (cookie sign-in, ask and streaming endpoints, run history, rate limit, daily spend cap, kill switch). No accuracy results have been published yet: the only live runs so far are on the dev split, which is used for tuning. Test-split results with repeats come in Phase 7. See [PROGRESS.md](PROGRESS.md) and, for the data, [docs/DATA.md](docs/DATA.md).
+Phases 0-6 of 10 done: scaffold, synthetic database, safety layer (103 adversarial validator cases plus database-level attack tests, all blocked), the evaluation harness with a 100-question golden set (40 dev / 60 test) and a single-prompt baseline, the LangGraph agent (input guard, hybrid retrieval, SQL repair loop, result checks, template answers, budget guard), the FastAPI API (cookie sign-in, ask and streaming endpoints, run history, rate limit, daily spend cap, kill switch), and the React web app (live step timeline, answer card, SQL, sortable table with CSV, auto chart, history, data dictionary). No accuracy results have been published yet: the only live runs so far are on the dev split, which is used for tuning. Test-split results with repeats come in Phase 7. See [PROGRESS.md](PROGRESS.md) and, for the data, [docs/DATA.md](docs/DATA.md).
 
 ## Local development
 
@@ -31,4 +35,5 @@ uv run poe check
 uv run poe ask          # list the keyless demo questions
 uv run poe ask "What was net revenue by sales channel in Q1 2026?" --user manager_jakarta
 uv run poe api         # http://127.0.0.1:8000/api/docs (sign in with a demo user from .env)
+uv run poe web-install && uv run poe web   # http://127.0.0.1:5173 (with `poe api` running)
 ```

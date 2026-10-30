@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+/* Colours and fonts follow Baron's portfolio site (dark, emerald accent). */
+@theme {
+  --color-bg: #060807;
+  --color-raised: #0b0f0d;
+  --color-panel: rgba(148, 168, 156, 0.05);
+  --color-panel-strong: rgba(148, 168, 156, 0.08);
+  --color-line: rgba(148, 168, 156, 0.14);
+  --color-line-faint: rgba(148, 168, 156, 0.09);
+  --color-line-hover: rgba(110, 231, 183, 0.32);
+  --color-ink: #e8f0eb;
+  --color-ink-soft: #b5c4ba;
+  --color-ink-mute: #8a9b90;
+  --color-accent: #34d399;
+  --color-accent-soft: #6ee7b7;
+  --color-accent-deep: #10b981;
+  --color-warn: #fbbf24;
+  --color-danger: #f87171;
+
+  --font-display: "Space Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --radius-card: 14px;
+  --radius-card-lg: 20px;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-bg font-sans text-ink antialiased;
+    min-height: 100dvh;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: rgba(52, 211, 153, 0.28);
+  }
+}
+
+/* Shared component classes. Declared as utilities so they can be combined and @apply'd. */
+@utility card {
+  @apply rounded-[var(--radius-card)] border border-line bg-raised;
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-[10px] px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-accent text-bg hover:bg-accent-soft;
+}
+@utility btn-ghost {
+  @apply btn border border-line text-ink-soft hover:border-line-hover hover:text-ink;
+}
+@utility chip {
+  @apply inline-flex items-center gap-1 rounded-full border border-line px-2.5 py-0.5 text-xs text-ink-soft;
+}
+@utility label {
+  @apply text-xs font-medium tracking-wide text-ink-mute uppercase;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
