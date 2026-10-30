@@ -161,9 +161,40 @@ def strip_slots(template: str) -> str:
     return SLOT.sub(" ", template)
 
 
+def _money_slot(slot: str, columns: list[str]) -> bool:
+    m = _CELL.match(slot) or _AGG.match(slot)
+    if not m:
+        return False
+    try:
+        name = columns[_column_index(columns, m.group(2).strip())]
+    except RenderError:
+        return False
+    return column_kind(name) == "money"
+
+
 def fill(template: str, columns: list[str], rows: list[list[Any]], lang: Lang) -> str:
-    """Replace every slot with its formatted value. Raises RenderError on a bad slot."""
-    return SLOT.sub(lambda m: slot_value(m.group(1), columns, rows, lang), template)
+    """Replace every slot with its formatted value. Raises RenderError on a bad slot.
+
+    Money values carry their own currency ("IDR 1.2B", "Rp 1,2 miliar"), so a currency word
+    the model wrote right next to a money slot ("Rp {{r0.x}}", "{{r0.x}} IDR") is dropped.
+    """
+
+    def replace(m: re.Match[str]) -> str:
+        slot = m.group("slot")
+        value = slot_value(slot, columns, rows, lang)
+        if m.group("before") is None and m.group("after") is None:
+            return value
+        if _money_slot(slot, columns):
+            return value
+        return (m.group("before") or "") + value + (m.group("after") or "")
+
+    return _SLOT_WITH_CURRENCY.sub(replace, template)
+
+
+_SLOT_WITH_CURRENCY = re.compile(
+    r"(?P<before>\b(?:Rp\.?|IDR)\s*)?\{\{\s*(?P<slot>[^{}]*?)\s*\}\}(?P<after>\s*(?:IDR|rupiah)\b)?",
+    re.IGNORECASE,
+)
 
 
 def grounding_problems(template: str, caveats: list[str], question: str) -> list[str]:

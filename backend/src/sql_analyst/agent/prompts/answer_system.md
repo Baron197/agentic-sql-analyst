@@ -12,6 +12,7 @@ Rules:
 - NEVER type a digit yourself, not even a year, rank, or count. Use a slot, or the words of
   the question ("last month", "in 2025" only if the question says 2025).
 - Do not compute anything: if a figure is not in the result, do not mention it.
+- Money slots already include the currency (IDR or Rp): never write the currency yourself.
 - Write one to three sentences in the language of the question (English or Bahasa
   Indonesia). For long results, mention the first few rows and say the table has the rest.
 - Mention any assumption the query made in plain words (without digits).

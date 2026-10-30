@@ -17,7 +17,7 @@ All four are built and tested without an API key (see [docs/SECURITY.md](docs/SE
 
 ## Status
 
-Phases 0-3 of 10 done: scaffold, synthetic database, safety layer (103 adversarial validator cases plus database-level attack tests, all blocked), and the evaluation harness with a 100-question golden set (40 dev / 60 test) and a single-prompt baseline. Phase 4 (the LangGraph agent: input guard, hybrid retrieval, SQL repair loop, result checks, template answers, budget guard) is built and tested keylessly; its live comparison with the baseline is pending. No accuracy results have been published yet. See [PROGRESS.md](PROGRESS.md) and, for the data, [docs/DATA.md](docs/DATA.md).
+Phases 0-4 of 10 done: scaffold, synthetic database, safety layer (103 adversarial validator cases plus database-level attack tests, all blocked), the evaluation harness with a 100-question golden set (40 dev / 60 test) and a single-prompt baseline, and the LangGraph agent (input guard, hybrid retrieval, SQL repair loop, result checks, template answers, budget guard). No accuracy results have been published yet: the only live runs so far are on the dev split, which is used for tuning. Test-split results with repeats come in Phase 7. See [PROGRESS.md](PROGRESS.md) and, for the data, [docs/DATA.md](docs/DATA.md).
 
 ## Local development
 

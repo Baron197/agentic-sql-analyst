@@ -112,3 +112,17 @@ def test_grounding_allows_numbers_from_the_question_only():
     }
     assert grounding_problems("{{r0.x}} in Q2 2026", [], "Revenue in Q2 2026?") == []
     assert grounding_problems("{{r0.x}} orders", ["Data ends in 2026."], "orders?") == ["2026"]
+
+
+@pytest.mark.parametrize(
+    ("template", "lang", "expected"),
+    [
+        ("sebesar Rp{{r0.net_revenue_idr}}", "id", "sebesar Rp 8,81 miliar"),
+        ("({{r0.net_revenue_idr}} IDR)", "en", "(IDR 8.81B)"),
+        ("IDR {{sum.net_revenue_idr}} total", "en", "IDR 8.81B total"),
+        ("{{r0.orders}} rupiah", "id", "5 rupiah"),  # only money slots carry a currency
+    ],
+)
+def test_currency_written_next_to_a_money_slot_is_not_doubled(template, lang, expected):
+    """Live run 2026-10-30: the model wrote "Rp{{…}}", which rendered as "RpRp 8,81 miliar"."""
+    assert fill(template, ["net_revenue_idr", "orders"], [[8_810_000_000, 5]], lang) == expected

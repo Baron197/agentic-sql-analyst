@@ -10,8 +10,8 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 | 1 Synthetic enterprise database | **done** (2026-10-29) | all DoD items pass; see session log |
 | 2 Safety layer | **done** (2026-10-29) | all DoD items pass; see session log |
 | 3 Eval harness, golden set, baseline | **done** (2026-10-30) | all DoD items pass; see session log |
-| 4 Agent core | **in progress** | all DoD items pass except the live agent-vs-baseline run on dev (needs Baron's OK) |
-| 5 API | not started | |
+| 4 Agent core | **done** (2026-10-30) | all DoD items pass; see session log |
+| 5 API | not started | next |
 | 6 Web app | not started | |
 | 7 Real-mode evaluation | not started | needs Baron's budget OK |
 | 8 Deploy | not started | |
@@ -44,18 +44,47 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 
 ## Next step
 
-Finish Phase 4 with the last DoD item: **the live agent-vs-baseline run on `dev`, with Baron's OK**.
-- Commands (each prints its estimate first; nothing is spent without `--confirm-live`):
-  - `uv run poe eval --system agent --mode live --split dev --model gpt-6-luna --confirm-live`
-  - `uv run poe eval --system baseline --mode live --split dev --model gpt-6-luna --confirm-live`
-- Estimated upper bound, 40 questions × 1 repeat, no caching assumed: agent ≤ $0.19, baseline ≤ $0.09 (total ≤ $0.28). Phase 3's measured cost was ~7× below its estimate.
-- Then commit the results, write the comparison in this file (date, model, n, repeats; dev is for tuning, so these are not reportable accuracy numbers), mark Phase 4 done, and stop. Phase 5 (API) starts only when Baron says so.
+Phase 5: API (BUILD_GUIDE §10 and §13), only when Baron says so. Start with a plan covering:
+- FastAPI app: auth (argon2 hashes, JWT in an httpOnly cookie, seeded demo users `analyst@demo` / `manager.jakarta@demo`, passwords from `.env`), `POST /api/ask`, `POST /api/ask/stream` (SSE events step, sql, rows, answer, done / error), `GET /api/runs`, `/api/runs/{id}`, `/api/schema`, `/api/examples`, `/api/health`, `/api/metrics`;
+- the run store moves from JSONL to Postgres, written by a separate role so `nlq_reader` stays read-only (D030);
+- limits: 10 questions/min per user, `DAILY_BUDGET_USD` (429), kill switch `LIVE_MODE_ENABLED=false` (503); JSON structured logs with `run_id`; OpenAPI docs;
+- DoD tests: auth required and wrong password rejected; the manager sees only Jakarta; stream event order; rate limit, budget cap, kill switch.
+- Worth doing early in Phase 5 or 7 (from the Phase 4 live run): look at why the agent costs about twice the baseline (cache writes) and whether the d019, d027, d029 gold expectations are right (Baron's spot-check).
 
 ## Session log
 
 _(newest first: date, what was done, decisions, issues)_
 
-### 2026-10-30: Phase 4 agent core (built and tested keylessly; live run pending)
+### 2026-10-30: Phase 4 completed (live agent-vs-baseline run on dev)
+
+- **Live runs, approved by Baron** (estimate printed beforehand: agent ≤ $0.19, baseline ≤ $0.09):
+  - `uv run poe eval --system agent --mode live --split dev --model gpt-6-luna --confirm-live` → `eval/results/2026-10-30_agent_live_dev_gpt-6-luna_n40_r1.md`
+  - `uv run poe eval --system baseline --mode live --split dev --model gpt-6-luna --confirm-live` → `eval/results/2026-10-30_baseline_live_dev_gpt-6-luna_n40_r1.md`
+  - Both: 2026-10-30, `gpt-6-luna`, 40 dev questions, 1 repeat, commit a8f4379, database unchanged. Recorded costs equal the costs recomputed from the price table.
+- **Comparison (dev is the tuning split: one repeat, not a reportable accuracy number):**
+
+  | Metric | Agent | Baseline |
+  |---|---|---|
+  | EX strict | 0.697 | 0.697 |
+  | EX lenient | 0.879 | 0.909 |
+  | Valid SQL rate | 0.970 | 0.970 |
+  | Repair rate | 0.0 | n/a |
+  | Refusal accuracy / unsafe refusal rate | 1.0 / 1.0 | 1.0 / 1.0 |
+  | Safety block rate (gate) | 1.0 | 1.0 |
+  | Grounding violations (agent gate) | **0** of 32 answers | 31 of 32 answers |
+  | Latency p50 / p95 | 9.2 s / 13.1 s | 6.2 s / 10.3 s |
+  | Cost, 40 questions | $0.0241 | $0.0120 |
+
+- **Honest reading:** on dev the agent does **not** beat the baseline on accuracy. It ties on strict EX and is one case behind on lenient EX, at about twice the cost and 1.5× the latency. What it adds is the grounding guarantee (0 vs 31 of 32 answers with model-typed numbers) with no loss of safety. On a 22-view schema the whole dictionary fits in a cached prompt, so the baseline is strong. Whether retrieval or repair help is for the Phase 7 ablations on the test split, with 3 repeats.
+- Failures, agent: d019 and d027 (the baseline fails them too: worth a gold spot-check), d028 (a 12-month window for "best customers", steered by an example in my SQL prompt; the baseline got it right), d029 (both refused an ambiguous "this month" question). No run needed a repair.
+- **Fixed after the run** (the committed results show the problem as it was):
+  - the model wrote "Rp"/"IDR" next to money slots, which rendered as "RpRp 8,81 miliar" and "IDR 1.24B IDR". Code now drops a currency word next to a money slot, and the answer prompt says money slots carry their currency. Regression test in `test_render.py`;
+  - the SQL prompt's example assumption ("best customers = … last 12 months") resembled dev d028 and steered it. It's replaced with a neutral example.
+  - Neither change affects the scored metrics (EX and grounding are scored on SQL results and model-typed text). Not re-run, to avoid spending without a new OK.
+- Total live spend this session: $0.0361.
+- Phase 4 DoD: all four items pass. `REQUIRE_DB=1 uv run poe check`: 684 passed.
+
+### 2026-10-30: Phase 4 agent core (built and tested keylessly)
 
 **Built**
 - `agent/`: LangGraph graph (`graph.py`) with nodes guard_input → retrieve_context → generate_sql → validate_sql → execute → check_result → write_answer → render_numbers → finalize, plus refuse and budget_stop. Nodes leave the default path through `goto`; every edge goes through the budget guard (`budget.py`).
@@ -81,7 +110,7 @@ _(newest first: date, what was done, decisions, issues)_
   - graph tests with the fake LLM for success, repair, unsafe refusal, unanswerable refusal, budget stop, and grounding rejection (plus capped repairs, empty-result retry, critic, model failures, ablations, prompt-cache stability): `test_graph.py`, 24 tests;
   - keyless end to end for every demo question and both users against the real database, index, and RLS: `test_keyless_e2e.py`. The manager sees 20 Jabodetabek stores, the analyst 39.
 - `uv run poe eval --system agent --mode keyless --split dev`: both gates pass (safety 100%, grounding violations 0), labelled PLUMBING ONLY. Not committed as a result: it says nothing about quality.
-- **Pending:** the live agent-vs-baseline run (needs Baron's OK).
+- The live agent-vs-baseline run followed in the next session-log entry.
 
 ### 2026-10-30: Phase 3 completed (live baseline cost-tracking run)
 
