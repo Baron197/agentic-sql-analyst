@@ -12,8 +12,8 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 | 3 Eval harness, golden set, baseline | **done** (2026-10-30) | all DoD items pass; see session log |
 | 4 Agent core | **done** (2026-10-30) | all DoD items pass; see session log |
 | 5 API | **done** (2026-10-30) | all DoD items pass; see session log |
-| 6 Web app | **in progress** | all DoD items pass except Baron's review of the 375 px / 1280 px screenshots (`docs/screenshots/`) |
-| 7 Real-mode evaluation | not started | needs Baron's budget OK |
+| 6 Web app | **done** (2026-10-30) | all DoD items pass; see session log |
+| 7 Real-mode evaluation | not started | next; needs Baron's budget OK |
 | 8 Deploy | not started | |
 | 9 Portfolio packaging | not started | |
 
@@ -45,18 +45,17 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 
 ## Next step
 
-1. **Baron reviews the screenshots** in `docs/screenshots/` (Ask and sign-in pages at 1280 px and 375 px; regenerate with `uv run poe web-screenshots`). Apply any changes he asks for, re-run `uv run poe web-check` and `uv run poe web-e2e`, then mark Phase 6 done and commit.
-2. Then Phase 7: real-mode evaluation and hardening (BUILD_GUIDE §13), only when Baron says so and with his budget OK. Start with a plan covering:
-   - candidate models (2-3) and the cost estimate for the test split × 3 repeats, plus the ablations (no retrieval, no repair, no few-shot, critic on) on dev or test;
-   - the open items from Phase 4: why the agent costs about twice the baseline (cache writes), and Baron's spot-check of the d019, d027, d029 gold answers;
-   - t056 (does a live answer repeat the planted injection?);
-   - `docs/EVAL_RESULTS.md`, with every number taken from a committed `eval/results/` file.
+Phase 7: real-mode evaluation and hardening (BUILD_GUIDE §13), only when Baron says so and with his budget OK. Start with a plan covering:
+- candidate models (2-3) and the cost estimate for the test split × 3 repeats, plus the ablations (no retrieval, no repair, no few-shot, critic on) on dev or test;
+- the open items from Phase 4: why the agent costs about twice the baseline (cache writes), and Baron's spot-check of the d019, d027, d029 gold answers;
+- t056 (does a live answer repeat the planted injection?);
+- `docs/EVAL_RESULTS.md`, with every number taken from a committed `eval/results/` file.
 
 ## Session log
 
 _(newest first: date, what was done, decisions, issues)_
 
-### 2026-10-30: Phase 6 web app (built; screenshot review pending)
+### 2026-10-30: Phase 6 web app (completed)
 
 **Built** (`web/`, React 19 + TypeScript 6.0 + Vite 8 + Tailwind 4 + Recharts 3)
 - Pages: sign-in (demo accounts listed; "Try as analyst / manager" buttons when `DEMO_LOGIN_ENABLED=true`), Ask, History (+ run detail), Data dictionary (searchable), About (how it works, the four guarantees, what this is and isn't). The fictional-data notice is in every page footer.
@@ -81,7 +80,7 @@ _(newest first: date, what was done, decisions, issues)_
 - `uv run poe web-e2e`: the Playwright smoke test passes (sign in → ask a keyless demo question → steps, SQL, a 4-row table, and the answer appear). It runs against the Postgres container plus `poe api` and the Vite dev server; the fully containerised stack comes in Phase 8 (plan default 1).
 - Streaming through the Vite proxy is incremental: with a cold API, the first `step` event arrived at 128 ms and the next at 1,654 ms (while the embedding model loaded), then the rest within 0.35 s.
 - `REQUIRE_DB=1 uv run poe check`: 728 passed (726 before + 2 demo sign-in tests).
-- Screenshots at 1280 px and 375 px: `docs/screenshots/ask-desktop-1280.png`, `ask-mobile-375.png`, `login-*.png`. **Pending: Baron's review.**
+- Screenshots at 1280 px and 375 px: `docs/screenshots/ask-desktop-1280.png`, `ask-mobile-375.png`, `login-*.png`. Reviewed and approved by Baron on 2026-10-30 ("Looks good"); no changes requested.
 
 ### 2026-10-30: Phase 5 API (completed)
 
