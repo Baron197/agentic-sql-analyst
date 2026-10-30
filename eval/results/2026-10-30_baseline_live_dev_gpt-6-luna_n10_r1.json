@@ -1,0 +1,529 @@
+{
+  "meta": {
+    "date": "2026-10-30",
+    "started_at": "2026-10-30T09:21:24+07:00",
+    "commit": "6bdcc7d",
+    "system": "baseline",
+    "mode": "live",
+    "split": "dev",
+    "model": "gpt-6-luna",
+    "n_questions": 10,
+    "repeats": 1,
+    "label": "LIVE: real model calls",
+    "as_of_date": "2026-10-01",
+    "prices_as_of": "anthropic 2026-10-06, openai 2026-10-30",
+    "db_unchanged": true,
+    "gates": {
+      "safety_block_rate = 100% (no adversarial/access_control cases in this run)": true
+    }
+  },
+  "aggregate": {
+    "ex_strict": {
+      "mean": 0.9,
+      "std": 0.0
+    },
+    "ex_lenient": {
+      "mean": 1.0,
+      "std": 0.0
+    },
+    "valid_sql_rate": {
+      "mean": 1.0,
+      "std": 0.0
+    },
+    "false_refusal_rate": {
+      "mean": 0.0,
+      "std": 0.0
+    },
+    "refusal_accuracy": {
+      "mean": null,
+      "std": null
+    },
+    "unsafe_refusal_rate": {
+      "mean": null,
+      "std": null
+    },
+    "safety_block_rate": {
+      "mean": null,
+      "std": null
+    },
+    "assumption_rate": {
+      "mean": null,
+      "std": null
+    },
+    "grounding_violations": {
+      "mean": 9.0,
+      "std": 0.0
+    },
+    "latency_p50_ms": {
+      "mean": 6612.1,
+      "std": 0.0
+    },
+    "latency_p95_ms": {
+      "mean": 8488.0,
+      "std": 0.0
+    },
+    "cost_per_question_usd": {
+      "mean": 0.0003,
+      "std": 0.0
+    },
+    "total_cost_usd": {
+      "mean": 0.0031,
+      "std": 0.0
+    }
+  },
+  "per_repeat": [
+    {
+      "n_cases": 10,
+      "ex_strict": 0.9,
+      "ex_lenient": 1.0,
+      "valid_sql_rate": 1.0,
+      "false_refusal_rate": 0.0,
+      "refusal_accuracy": null,
+      "unsafe_refusal_rate": null,
+      "safety_block_rate": null,
+      "assumption_rate": null,
+      "grounding_violations": 9,
+      "answers_written": 10,
+      "latency_p50_ms": 6612.1,
+      "latency_p95_ms": 8488.0,
+      "cost_per_question_usd": 0.000308,
+      "total_cost_usd": 0.003076,
+      "input_tokens": 1647,
+      "output_tokens": 2746,
+      "cache_read_tokens": 71046,
+      "cache_write_tokens": 8283,
+      "ex_lenient_by_category": {
+        "aggregation": 1.0,
+        "join": 1.0,
+        "lookup": 1.0
+      },
+      "errors": []
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "d001",
+      "repeat": 0,
+      "category": "lookup",
+      "lang": "en",
+      "user": "analyst",
+      "expected": "answer",
+      "decision": "answer",
+      "ex_strict": true,
+      "ex_lenient": true,
+      "valid_sql": true,
+      "refused_correctly": null,
+      "assumption_stated": null,
+      "safety_ok": null,
+      "typed_numbers": [
+        "5"
+      ],
+      "error_code": null,
+      "error_message": null,
+      "latency_ms": 8423.4,
+      "cost_usd": 0.000937,
+      "input_tokens": 148,
+      "output_tokens": 258,
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 7932,
+      "sql": "SELECT COUNT(*) AS store_count FROM analytics.dim_store AS s JOIN analytics.dim_region AS r ON r.region_id = s.region_id WHERE r.city = 'Surabaya' AND s.is_open = TRUE",
+      "assumptions": [
+        "Interpreted “have” as stores currently open, excluding permanently closed stores."
+      ],
+      "answer": "The company has 5 stores in Surabaya.",
+      "rows_preview": [
+        [
+          5
+        ]
+      ]
+    },
+    {
+      "case_id": "d002",
+      "repeat": 0,
+      "category": "lookup",
+      "lang": "id",
+      "user": "analyst",
+      "expected": "answer",
+      "decision": "answer",
+      "ex_strict": true,
+      "ex_lenient": true,
+      "valid_sql": true,
+      "refused_correctly": null,
+      "assumption_stated": null,
+      "safety_ok": null,
+      "typed_numbers": [
+        "38"
+      ],
+      "error_code": null,
+      "error_message": null,
+      "latency_ms": 8540.8,
+      "cost_usd": 0.00023294,
+      "input_tokens": 148,
+      "output_tokens": 271,
+      "cache_read_tokens": 7894,
+      "cache_write_tokens": 37,
+      "sql": "SELECT COUNT(*) AS active_product_count FROM analytics.dim_product AS p JOIN analytics.dim_category AS c ON c.category_id = p.category_id JOIN analytics.dim_category AS d ON d.category_id = c.parent_category_id WHERE p.is_active = TRUE AND d.level = 1 AND d.category_name_id = 'Elektronik'",
+      "assumptions": [
+        "Elektronik means the top-level department, including its subcategories."
+      ],
+      "answer": "Ada 38 produk aktif di kategori Elektronik.",
+      "rows_preview": [
+        [
+          38
+        ]
+      ]
+    },
+    {
+      "case_id": "d003",
+      "repeat": 0,
+      "category": "lookup",
+      "lang": "en",
+      "user": "analyst",
+      "expected": "answer",
+      "decision": "answer",
+      "ex_strict": true,
+      "ex_lenient": true,
+      "valid_sql": true,
+      "refused_correctly": null,
+      "assumption_stated": null,
+      "safety_ok": null,
+      "typed_numbers": [],
+      "error_code": null,
+      "error_message": null,
+      "latency_ms": 7297.7,
+      "cost_usd": 0.00031214,
+      "input_tokens": 163,
+      "output_tokens": 427,
+      "cache_read_tokens": 7894,
+      "cache_write_tokens": 34,
+      "sql": "SELECT DISTINCT p.payment_method FROM analytics.fact_payments AS p JOIN analytics.fact_orders AS o ON o.order_id = p.order_id WHERE o.status <> 'cancelled' ORDER BY p.payment_method",
+      "assumptions": [
+        "Interpreted “have customers used” as payment methods recorded on non-cancelled orders, including orders that were later refunded."
+      ],
+      "answer": "Customers have used bank transfer, card, cash, cash on delivery (COD), e-wallet, and QRIS.",
+      "rows_preview": [
+        [
+          "bank_transfer"
+        ],
+        [
+          "card"
+        ],
+        [
+          "cash"
+        ],
+        [
+          "cod"
+        ],
+        [
+          "ewallet"
+        ]
+      ]
+    },
+    {
+      "case_id": "d004",
+      "repeat": 0,
+      "category": "lookup",
+      "lang": "en",
+      "user": "analyst",
+      "expected": "answer",
+      "decision": "answer",
+      "ex_strict": true,
+      "ex_lenient": true,
+      "valid_sql": true,
+      "refused_correctly": null,
+      "assumption_stated": null,
+      "safety_ok": null,
+      "typed_numbers": [
+        "14",
+        "2025"
+      ],
+      "error_code": null,
+      "error_message": null,
+      "latency_ms": 5998.6,
+      "cost_usd": 0.00018594,
+      "input_tokens": 153,
+      "output_tokens": 176,
+      "cache_read_tokens": 7894,
+      "cache_write_tokens": 37,
+      "sql": "SELECT opened_date FROM analytics.dim_store WHERE store_name ILIKE '%Gading Serpong%'",
+      "assumptions": [
+        "The Gading Serpong store is identified by a store_name containing “Gading Serpong.”"
+      ],
+      "answer": "The Gading Serpong store opened on February 14, 2025.",
+      "rows_preview": [
+        [
+          "2025-02-14"
+        ]
+      ]
+    },
+    {
+      "case_id": "d005",
+      "repeat": 0,
+      "category": "aggregation",
+      "lang": "en",
+      "user": "analyst",
+      "expected": "answer",
+      "decision": "answer",
+      "ex_strict": true,
+      "ex_lenient": true,
+      "valid_sql": true,
+      "refused_correctly": null,
+      "assumption_stated": null,
+      "safety_ok": null,
+      "typed_numbers": [
+        "2,079"
+      ],
+      "error_code": null,
+      "error_message": null,
+      "latency_ms": 4870.5,
+      "cost_usd": 0.00016744,
+      "input_tokens": 149,
+      "output_tokens": 140,
+      "cache_read_tokens": 7894,
+      "cache_write_tokens": 36,
+      "sql": "SELECT COUNT(*) AS cancelled_order_count FROM analytics.fact_orders WHERE status = 'cancelled'",
+      "assumptions": [],
+      "answer": "A total of 2,079 orders have been cancelled.",
+      "rows_preview": [
+        [
+          2079
+        ]
+      ]
+    },
+    {
+      "case_id": "d006",
+      "repeat": 0,
+      "category": "aggregation",
+      "lang": "id",
+      "user": "analyst",
+      "expected": "answer",
+      "decision": "answer",
+      "ex_strict": true,
+      "ex_lenient": true,
+      "valid_sql": true,
+      "refused_correctly": null,
+      "assumption_stated": null,
+      "safety_ok": null,
+      "typed_numbers": [
+        "163.292.500"
+      ],
+      "error_code": null,
+      "error_message": null,
+      "latency_ms": 7058.5,
+      "cost_usd": 0.00027484,
+      "input_tokens": 164,
+      "output_tokens": 350,
+      "cache_read_tokens": 7894,
+      "cache_write_tokens": 45,
+      "sql": "SELECT SUM(fs.shipping_fee_idr) AS total_ongkos_kirim_idr FROM analytics.fact_shipments AS fs WHERE CAST((fs.shipped_at AT TIME ZONE 'Asia/Jakarta') AS DATE) >= CAST('2025-01-01' AS DATE) AND CAST((fs.shipped_at AT TIME ZONE 'Asia/Jakarta') AS DATE) < CAST('2026-01-01' AS DATE)",
+      "assumptions": [
+        "Tahun 2025 ditafsirkan sebagai tahun kalender berdasarkan tanggal WIB saat paket dikirim.",
+        "Total ongkos kirim mencakup seluruh paket yang tercatat dikirim pada periode tersebut."
+      ],
+      "answer": "Total ongkos kirim untuk paket yang dikirim selama tahun 2025 adalah Rp163.292.500.",
+      "rows_preview": [
+        [
+          "163292500"
+        ]
+      ]
+    },
+    {
+      "case_id": "d007",
+      "repeat": 0,
+      "category": "aggregation",
+      "lang": "en",
+      "user": "analyst",
+      "expected": "answer",
+      "decision": "answer",
+      "ex_strict": true,
+      "ex_lenient": true,
+      "valid_sql": true,
+      "refused_correctly": null,
+      "assumption_stated": null,
+      "safety_ok": null,
+      "typed_numbers": [
+        "3.44",
+        "3.47",
+        "4.00",
+        "4.01",
+        "4.03",
+        "4.07"
+      ],
+      "error_code": null,
+      "error_message": null,
+      "latency_ms": 6865.1,
+      "cost_usd": 0.00022784,
+      "input_tokens": 206,
+      "output_tokens": 248,
+      "cache_read_tokens": 7894,
+      "cache_write_tokens": 43,
+      "sql": "SELECT ticket_category, ROUND(CAST(AVG(csat_score) AS DECIMAL), 2) AS average_csat_score FROM analytics.fact_support_tickets WHERE ticket_status = 'resolved' GROUP BY ticket_category ORDER BY ticket_category",
+      "assumptions": [
+        "Unrated resolved tickets (NULL csat_score) are excluded from the average."
+      ],
+      "answer": "Average CSAT scores for resolved support tickets by category are: account 4.01, delivery 3.44, other 4.03, payment 4.07, product quality 4.00, and refund 3.47.",
+      "rows_preview": [
+        [
+          "account",
+          "4.01"
+        ],
+        [
+          "delivery",
+          "3.44"
+        ],
+        [
+          "other",
+          "4.03"
+        ],
+        [
+          "payment",
+          "4.07"
+        ],
+        [
+          "product_quality",
+          "4.00"
+        ]
+      ]
+    },
+    {
+      "case_id": "d008",
+      "repeat": 0,
+      "category": "aggregation",
+      "lang": "en",
+      "user": "analyst",
+      "expected": "answer",
+      "decision": "answer",
+      "ex_strict": true,
+      "ex_lenient": true,
+      "valid_sql": true,
+      "refused_correctly": null,
+      "assumption_stated": null,
+      "safety_ok": null,
+      "typed_numbers": [
+        "14,014",
+        "5,034",
+        "952"
+      ],
+      "error_code": null,
+      "error_message": null,
+      "latency_ms": 6308.9,
+      "cost_usd": 0.00018194,
+      "input_tokens": 168,
+      "output_tokens": 165,
+      "cache_read_tokens": 7894,
+      "cache_write_tokens": 37,
+      "sql": "SELECT segment, COUNT(*) AS registered_customers FROM analytics.dim_customer GROUP BY segment ORDER BY segment",
+      "assumptions": [],
+      "answer": "There are 5,034 registered customers in the member segment, 14,014 in regular, and 952 in VIP.",
+      "rows_preview": [
+        [
+          "member",
+          5034
+        ],
+        [
+          "regular",
+          14014
+        ],
+        [
+          "vip",
+          952
+        ]
+      ]
+    },
+    {
+      "case_id": "d009",
+      "repeat": 0,
+      "category": "aggregation",
+      "lang": "en",
+      "user": "analyst",
+      "expected": "answer",
+      "decision": "answer",
+      "ex_strict": true,
+      "ex_lenient": true,
+      "valid_sql": true,
+      "refused_correctly": null,
+      "assumption_stated": null,
+      "safety_ok": null,
+      "typed_numbers": [
+        "1,950"
+      ],
+      "error_code": null,
+      "error_message": null,
+      "latency_ms": 6359.1,
+      "cost_usd": 0.00025114,
+      "input_tokens": 149,
+      "output_tokens": 307,
+      "cache_read_tokens": 7894,
+      "cache_write_tokens": 38,
+      "sql": "SELECT COALESCE(SUM(r.quantity), 0) AS returned_units FROM analytics.fact_returns AS r JOIN analytics.fact_orders AS o ON o.order_id = r.order_id WHERE r.reason = 'damaged' AND o.status <> 'cancelled'",
+      "assumptions": [
+        "Interpreted “arrived damaged” as returns with reason = 'damaged'.",
+        "Counted returned units across the full available data window, excluding cancelled orders."
+      ],
+      "answer": "1,950 units have been returned because they arrived damaged.",
+      "rows_preview": [
+        [
+          1950
+        ]
+      ]
+    },
+    {
+      "case_id": "d010",
+      "repeat": 0,
+      "category": "join",
+      "lang": "en",
+      "user": "analyst",
+      "expected": "answer",
+      "decision": "answer",
+      "ex_strict": false,
+      "ex_lenient": true,
+      "valid_sql": true,
+      "refused_correctly": null,
+      "assumption_stated": null,
+      "safety_ok": null,
+      "typed_numbers": [
+        "4,543",
+        "5,039",
+        "5,114",
+        "5,349",
+        "7,073"
+      ],
+      "error_code": null,
+      "error_message": null,
+      "latency_ms": 6026.6,
+      "cost_usd": 0.00030524,
+      "input_tokens": 199,
+      "output_tokens": 404,
+      "cache_read_tokens": 7894,
+      "cache_write_tokens": 44,
+      "sql": "SELECT p.brand, SUM(oi.quantity) AS units_sold FROM analytics.fact_orders AS o JOIN analytics.fact_order_items AS oi ON oi.order_id = o.order_id JOIN analytics.dim_product AS p ON p.product_id = oi.product_id WHERE o.status <> 'cancelled' AND CAST((o.ordered_at AT TIME ZONE 'Asia/Jakarta') AS DATE) >= CAST('2025-01-01' AS DATE) AND CAST((o.ordered_at AT TIME ZONE 'Asia/Jakarta') AS DATE) < CAST('2026-01-01' AS DATE) GROUP BY p.brand ORDER BY units_sold DESC LIMIT 5",
+      "assumptions": [
+        "“In 2025” means the calendar year 2025 in WIB.",
+        "Units sold are the sum of order-line quantities on non-cancelled orders."
+      ],
+      "answer": "The top 5 brands by units sold in 2025, excluding cancelled orders, were Rasa Nusa (7,073), Melati (5,349), Sekar (5,114), Rupa (5,039), and Sari Buah (4,543).",
+      "rows_preview": [
+        [
+          "Rasa Nusa",
+          7073
+        ],
+        [
+          "Melati",
+          5349
+        ],
+        [
+          "Sekar",
+          5114
+        ],
+        [
+          "Rupa",
+          5039
+        ],
+        [
+          "Sari Buah",
+          4543
+        ]
+      ]
+    }
+  ]
+}

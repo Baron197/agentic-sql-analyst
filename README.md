@@ -17,7 +17,7 @@ The first two are built and tested (see [docs/SECURITY.md](docs/SECURITY.md)); t
 
 ## Status
 
-Phases 0-2 of 10 done: scaffold, synthetic database, safety layer (101 adversarial validator cases plus database-level attack tests, all blocked). See [PROGRESS.md](PROGRESS.md) and, for the data, [docs/DATA.md](docs/DATA.md).
+Phases 0-3 of 10 done: scaffold, synthetic database, safety layer (101 adversarial validator cases plus database-level attack tests, all blocked), and the evaluation harness with a 100-question golden set (40 dev / 60 test) and a single-prompt baseline. No accuracy results have been published yet. See [PROGRESS.md](PROGRESS.md) and, for the data, [docs/DATA.md](docs/DATA.md).
 
 ## Local development
 

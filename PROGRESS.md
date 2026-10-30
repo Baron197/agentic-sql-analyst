@@ -9,8 +9,8 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 | 0 Scaffold | **done** (2026-10-29) | all DoD items pass; see session log |
 | 1 Synthetic enterprise database | **done** (2026-10-29) | all DoD items pass; see session log |
 | 2 Safety layer | **done** (2026-10-29) | all DoD items pass; see session log |
-| 3 Eval harness, golden set, baseline | **in progress** | all DoD items pass except the live 10-question baseline run (needs Baron's OK + `ANTHROPIC_API_KEY`) |
-| 4 Agent core | not started | |
+| 3 Eval harness, golden set, baseline | **done** (2026-10-30) | all DoD items pass; see session log |
+| 4 Agent core | not started | next |
 | 5 API | not started | |
 | 6 Web app | not started | |
 | 7 Real-mode evaluation | not started | needs Baron's budget OK |
@@ -27,7 +27,7 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 
 ## Open questions for Baron
 
-- Live LLM provider: Anthropic chosen for the Phase 3 baseline run (model `claude-haiku-5-5` proposed for that run only). The final model choice is Phase 7.
+- Live LLM provider: Baron has an OpenAI key; the Phase 3 cost-tracking run used `gpt-6-luna` (D023). Both the OpenAI and Anthropic adapters exist. The final model choice is Phase 7.
 - Deploy target for Phase 8: Azure (A) or the existing AWS EC2 (B).
 - GitHub repository name and visibility (only when Baron says to push). CI has not run on GitHub yet; it is only schema-validated locally.
 - License: none chosen yet (the flagship uses MIT). Add before the repo goes public.
@@ -39,21 +39,34 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 - The function allow-list (D014) may refuse a legitimate function the agent needs; watch for `forbidden_function` errors in the Phase 3/4 eval and add functions deliberately.
 - Gold SQL is Claude's reading of each question. Baron should spot-check the ambiguous and metric-definition cases before any test-split number is quoted.
 - Whether an answer repeats the planted injection (t056) is not scored automatically yet (D020); Phase 4 templates make it testable.
-- Docker Desktop 4.80 on this machine crashed at startup because of leftover AF_UNIX socket files that Windows refuses to delete (error 1920). Workaround used on 2026-10-29: quit Docker Desktop and rename the folders aside: `%LOCALAPPDATA%\Docker\run` and `%LOCALAPPDATA%\docker-secrets-engine` (now `*.stale-20261029*`). They can be deleted after a reboot. If Docker fails to start again with "The file cannot be accessed by the system", repeat that. Quitting Docker Desktop normally (not killing it) should avoid it.
+- **Recurring (2026-10-29 and 2026-10-30):** Docker Desktop 4.80 on this machine crashed at startup because of leftover AF_UNIX socket files that Windows refuses to delete (error 1920). Workaround used on 2026-10-29: quit Docker Desktop and rename the folders aside: `%LOCALAPPDATA%\Docker\run` and `%LOCALAPPDATA%\docker-secrets-engine` (now `*.stale-20261029*`). They can be deleted after a reboot. If Docker fails to start again with "The file cannot be accessed by the system", repeat that. Quitting Docker Desktop normally (not killing it) should avoid it, but it happened again on 2026-10-30 after a normal session end (folders renamed to `*.stale-20261030`). The crash is in Docker's "Inference manager" (Docker Model Runner); turning that feature off in Docker Desktop settings may stop it. That is Baron's call, since it changes his Docker configuration.
 
 ## Next step
 
-Finish Phase 3: the live 10-question baseline run on `dev` (the last DoD item). It needs, in order:
-1. Baron adds `ANTHROPIC_API_KEY=...` to `.env` himself (never in chat).
-2. Baron's explicit OK for: model `claude-haiku-5-5`, 10 dev questions × 1 repeat, ~20 calls, estimated cost ≤ $0.03 (system prompt ~10.8k tokens). Sonnet 5.5 would be ≤ $0.45, Opus 5.5 ≤ $0.89.
-3. Run: `uv run poe eval --system baseline --mode live --split dev --limit 10 --confirm-live` (add `--model claude-haiku-5-5` to be explicit). Check that the results file shows real tokens, cache reads on the second and later calls, and a total cost that matches the Anthropic console.
-4. Commit the results file. Write a short note in PROGRESS that it proves cost tracking only; 10 dev questions are not an accuracy result.
-
-Then Phase 4 (agent core), starting with a plan.
+Phase 4: Agent core (BUILD_GUIDE §8 and §13). Start with a plan covering:
+- agent state, nodes, and the LangGraph graph (§8.1-8.2), with the budget guard on every edge;
+- retrieval: hybrid BM25 + local fastembed vectors (pgvector) over the dictionary, glossary, `data/examples.yaml`, and the value index (`dictionary/values.py`);
+- the repair loop (≤ 3), check_result, write_answer templates, and render_numbers (rejects any digit not in the question);
+- tracing, and the CLI `uv run poe ask "…" --user analyst`;
+- wiring `--system agent` into `eval/run_eval.py`, plus keyless graph tests (success, repair, unsafe refusal, unanswerable refusal, budget stop, grounding rejection);
+- the live agent-vs-baseline run on `dev` needs Baron's OK with a cost estimate. The providers already available are OpenAI (key in `.env`) and Anthropic (no key yet).
 
 ## Session log
 
 _(newest first: date, what was done, decisions, issues)_
+
+### 2026-10-30: Phase 3 completed (live baseline cost-tracking run)
+
+- Baron chose OpenAI, so I added `llm/openai.py` (Responses API structured outputs; D023), OpenAI prices (read 2026-10-30), `OPENAI_API_KEY`, and `--provider` / provider inferred from `--model`. Commit 6bdcc7d, 451 tests.
+- Docker Desktop crashed at startup again (stale `Docker\run` sockets). The documented workaround fixed it; see Open issues.
+- **Live baseline run (DoD item 5), approved by Baron:** `uv run poe eval --system baseline --mode live --split dev --limit 10 --model gpt-6-luna --confirm-live` → `eval/results/2026-10-30_baseline_live_dev_gpt-6-luna_n10_r1.md`.
+  - 2026-10-30, `gpt-6-luna`, 10 dev questions, 1 repeat, 20 calls, commit 6bdcc7d, database unchanged.
+  - Cost tracking verified: recorded $0.003076 equals the cost recomputed from the price table.
+  - Tokens: 1,647 uncached input + 71,046 cached + 8,283 cache-write, 2,746 output. Prompt caching works: the first call wrote ~7.9k tokens and the next 9 questions each read 7,894 from the cache.
+  - The estimate printed beforehand (≤ $0.0223) was conservative, because OpenAI counts the prompt at ~7.9k tokens vs the ~10.8k assumed.
+  - Latency p50 6.6 s per question (2 calls).
+  - **This is not an accuracy result.** The first 10 dev cases are the easy lookup/aggregation/join ones (EX lenient 10/10, strict 9/10; d010 added an extra `units_sold` column). Grounding violations 9/10 are expected: the baseline types numbers in free text.
+- Phase 3 DoD: all five items pass.
 
 ### 2026-10-30: Phase 3 eval harness, golden set, baseline (in progress)
 
