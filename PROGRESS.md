@@ -13,7 +13,7 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 | 4 Agent core | **done** (2026-10-30) | all DoD items pass; see session log |
 | 5 API | **done** (2026-10-30) | all DoD items pass; see session log |
 | 6 Web app | **done** (2026-10-30) | all DoD items pass; see session log |
-| 7 Real-mode evaluation | not started | next; needs Baron's budget OK |
+| 7 Real-mode evaluation | **done** (2026-11-02), model choice awaiting Baron | DoD passes; D043 recommends `gpt-6-luna`, Baron to confirm |
 | 8 Deploy | not started | |
 | 9 Portfolio packaging | not started | |
 
@@ -27,7 +27,7 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 
 ## Open questions for Baron
 
-- Live LLM provider: Baron has an OpenAI key; the Phase 3 cost-tracking run used `gpt-6-luna` (D023). Both the OpenAI and Anthropic adapters exist. The final model choice is Phase 7.
+- Live model: D043 recommends `gpt-6-luna` from the Phase 7 test runs (more accurate and cheaper than `gpt-4o-mini`). Baron to confirm; then set the `.env.example` and `config.py` defaults to `openai` / `gpt-6-luna` (`LLM_PROVIDER=fake` stays the default).
 - Deploy target for Phase 8: Azure (A) or the existing AWS EC2 (B).
 - GitHub repository name and visibility (only when Baron says to push). CI has not run on GitHub yet; it is only schema-validated locally.
 - License: none chosen yet (the flagship uses MIT). Add before the repo goes public.
@@ -38,23 +38,38 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 - Rate limits live in memory in one API process (D032): fine for one container, not for several instances.
 - Sessions are stateless JWTs: sign-out clears the cookie, but a copied token stays valid until it expires (8 h, D033).
 - The function allow-list (D014) may refuse a legitimate function the agent needs; watch for `forbidden_function` errors in the Phase 3/4 eval and add functions deliberately.
-- Gold SQL is Claude's reading of each question. Baron reviewed d019, d027, d029 on 2026-10-30 (D039, D040); the other ambiguous and metric-definition cases are still worth a spot-check before any test-split number is quoted.
-- Whether a live model's answer repeats the planted injection (t056) is not scored automatically (D020). Templates make typed figures impossible, but template prose is still model text; check t056 in the Phase 7 live test-split run.
+- Gold SQL is Claude's reading of each question. Baron reviewed d019, d027, d029 on 2026-10-30 (D039, D040). The Phase 7 failures were read by hand (EVAL_RESULTS finding 6); t028's gold is one-row-two-columns, and EX can't match the same figures as two rows (D044).
+- t056 (planted injection), checked by hand in Phase 7: every agent answer returns the hostile ticket subject as data, filled in by code; none follows it. Hardening idea: show text values from the database as quoted data in the answer, so the boundary is visible (EVAL_RESULTS finding 8).
+- The no-data refusal rule (D040) over-fired once on test (t010, a partly covered year) and the agent once grouped by `region_id` for a city question (t018). Add dev cases for both before any fix (D044).
+- The answer step writes its prompt to the cache and never reads it back (it contains the result rows): $0.0308 of the agent's $0.0856 on test. A cache-friendlier answer prompt is a possible saving, not measured.
 - The embedding model downloads from Hugging Face on the first `index-build` (unauthenticated; ~220 MB). On Windows, huggingface_hub warns that symlinks are unsupported; the poe tasks silence the warning and caching still works.
 - **Recurring (2026-10-29 and 2026-10-30):** Docker Desktop 4.80 on this machine crashed at startup because of leftover AF_UNIX socket files that Windows refuses to delete (error 1920). Workaround used on 2026-10-29: quit Docker Desktop and rename the folders aside: `%LOCALAPPDATA%\Docker\run` and `%LOCALAPPDATA%\docker-secrets-engine` (now `*.stale-20261029*`). They can be deleted after a reboot. If Docker fails to start again with "The file cannot be accessed by the system", repeat that. Quitting Docker Desktop normally (not killing it) should avoid it, but it happened again on 2026-10-30 after a normal session end (folders renamed to `*.stale-20261030`). The crash is in Docker's "Inference manager" (Docker Model Runner); turning that feature off in Docker Desktop settings may stop it. That is Baron's call, since it changes his Docker configuration.
 
 ## Next step
 
-Phase 7: real-mode evaluation and hardening (BUILD_GUIDE §13), only when Baron says so and with his budget OK. Start with a plan covering:
-- candidate models (2-3) and the cost estimate for the test split × 3 repeats, plus the ablations (no retrieval, no repair, no few-shot, critic on) on dev or test;
-- the open item from Phase 4: why the agent costs about twice the baseline (cache writes);
-- report `ex_relabeled` next to strict and lenient EX, and check by hand every case listed under "Passing only with renamed labels" (D039);
-- t056 (does a live answer repeat the planted injection?);
-- `docs/EVAL_RESULTS.md`, with every number taken from a committed `eval/results/` file.
+1. Baron confirms the live model (D043 recommends `gpt-6-luna`); then update the `.env.example` and `config.py` defaults (provider stays `fake`).
+2. Phase 8: deploy (BUILD_GUIDE §13), only when Baron says so. Needs his answers first: deploy target (Azure or AWS EC2), GitHub repository name and visibility plus the OK to push (CI has never run on GitHub), and a license. Start with a plan.
 
 ## Session log
 
 _(newest first: date, what was done, decisions, issues)_
+
+### 2026-11-01 to 2026-11-02: Phase 7 real-mode evaluation (completed; model choice awaiting Baron)
+
+- **Before the runs (dev only):** per-step usage and cache-hit rate in the harness, `prompt_cache_key` in the OpenAI adapter, and a dev check run (40 questions, $0.0244): EX relabeled 1.0.
+- **Test runs** (60 questions × 3 repeats, approved budget $2 with a stop at 2× any estimate): agent, baseline, no-retrieval, no-repair, no-few-shot, and critic on `gpt-6-luna` (2026-11-01), and the agent on `gpt-4o-mini` (2026-11-02). Every run came in under its estimate. Total Phase 7 spend $0.6669. All safety gates passed and every run left the database unchanged.
+- **Results** (docs/EVAL_RESULTS.md; every table generated by `eval/report.py` and linked to its file):
+  - agent EX relabeled 0.933 ± 0.023 vs baseline 0.953 ± 0.031: within noise;
+  - typed numbers: agent 0, baseline 48.3 per run;
+  - ablations: null results;
+  - critic: negative (0.873);
+  - `gpt-4o-mini`: 0.733 at 1.6× the cost.
+- **Decisions:** D041 (`prompt_cache_key` is a null result; the extra cost is the per-question retrieved context), D042 (two OpenAI models within budget), D043 (recommend `gpt-6-luna`; Baron to confirm), D044 (no tuning after the test run; critic stays off).
+- **DoD:**
+  - every number in EVAL_RESULTS.md links to a results file (links checked);
+  - the model choice is recorded in D043 with its reasoning, awaiting Baron's confirmation;
+  - CI is still keyless: `poe check` and `poe web-check` pass with no key.
+- **Also:** `eval/report.py` gained quality, cost, per-repeat, per-step, and language tables; ruff formatting fix.
 
 ### 2026-10-30: Scoring and refusal policy, decided with Baron (before Phase 7)
 

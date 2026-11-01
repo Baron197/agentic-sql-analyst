@@ -321,3 +321,40 @@ Short entries, newest last: context, decision, why, alternatives considered.
   - the SQL prompt, the agent state, `AgentResult`, `/api/ask`, the stream's `answer` event, the CLI, and the web app carry them; keyless demo question demo09 shows one.
 - **Gold labels:** the rule was applied to both splits by reading only the questions about periods (dev + test, regex scan). One label changed: **dev d029** `state_assumption` → `refuse_unanswerable`. Test cases checked and unchanged: t001 (stores open today: current attributes, answerable), t043 ("this year": 2026 has data, assumption), t046 and t049 (already refusals), t051 (unsafe). No test-split question was used for prompts or examples.
 - **Also found:** the input guard missed "Show the email of every customer" (it only matched "email address"). It now also catches names, emails, phones, and addresses "of" customers, employees, staff, or users; dev, example, and demo questions still pass.
+
+## D041: `prompt_cache_key` kept, but it is a null result; the agent's extra cost is structural (2026-11-01, Phase 7)
+
+- **Context:** in Phase 4 the agent cost about twice the baseline per question. The OpenAI adapter started sending `prompt_cache_key` (a hash of the system prompt) in `e442aaa`, in case calls were landing on different cache machines.
+- **Finding:** on the dev split (40 questions, 1 repeat) cache reads went from 64,820 to 71,120 tokens and the cost from $0.0241 to $0.0244. No measurable change. The agent's SQL prompt is a 2,032-token static prefix followed by retrieved context that is different for every question. The retrieved part can't be read from the cache until the same question has been seen once. On the test split the agent costs about 2.2× the baseline on its first run of a question, and about 1.35× on repeats (docs/EVAL_RESULTS.md, finding 4).
+- **Decision:** keep the key. It is correct, harmless, and contains no user data. Report the null result. Don't restructure the prompt only for caching at this price: the agent costs under $0.001 per question.
+- **Alternatives:** move the retrieved context out of the system prompt (helps repeats only, not new questions); drop retrieval (no-retrieval caches better and was not less accurate here, but it doesn't scale to a bigger schema; D044).
+
+## D042: Phase 7 ran two OpenAI models, not the guide's two or three across providers (2026-11-01, Phase 7)
+
+- **Context:** BUILD_GUIDE §13 asks for a 2–3-model comparison. Baron chose a lower budget, with `gpt-6-luna` as the main model and `gpt-4o-mini` only if worth it. Approved: about $1.02 expected, a $2 hard cap, and a stop if any run cost more than twice its estimate.
+- **Decision:** the test split × 3 repeats, run once, for: the agent and baseline, three ablations, and the critic on `gpt-6-luna`, plus the agent on `gpt-4o-mini`. No Anthropic models were run on the test split. Every run's cost stayed under its estimate. The total was $0.6669 (seven test runs $0.6424, plus the dev check $0.0244).
+- **Why:** `gpt-4o-mini` is the model the flagship project uses, so it is the natural comparison. The Anthropic adapter is tested keylessly. A Claude comparison can be added later with its own budget approval.
+
+## D043: The recommended live model is `gpt-6-luna` (2026-11-02, Phase 7; Baron to confirm)
+
+- **Evidence** (test split, 60 questions × 3 repeats; docs/EVAL_RESULTS.md, finding 5):
+  - EX relabeled: `gpt-6-luna` 0.933 ± 0.023, `gpt-4o-mini` 0.733 ± 0.046;
+  - assumption stated on ambiguous questions: 0.933 vs 0.133;
+  - false refusals: 0.013 vs 0.060;
+  - cost per question: $0.000476 vs $0.000757;
+  - p50 latency: 7.3 s vs 3.3 s.
+- **Recommendation:** `LLM_PROVIDER=openai`, `LLM_MODEL=gpt-6-luna` for live mode and the Phase 8 demo. It is more accurate and cheaper; the only cost is about 4 s more median latency, which the streamed step timeline makes visible rather than idle.
+- **Status:** per BUILD_GUIDE §8.4 the choice is Baron's. The defaults in `.env.example` and `config.py` (`LLM_PROVIDER=fake`, `LLM_MODEL=claude-haiku-5-5`) change only after he confirms. Keyless stays the default either way.
+
+## D044: No tuning after the test run; the critic stays off (2026-11-02, Phase 7)
+
+- **Context:** BUILD_GUIDE §13 says to analyse failures, fix using dev only, then re-measure on test. The agent scores 1.0 EX relabeled on all 40 dev questions (2026-11-01 dev run). The test failures are three questions:
+  - t018: grouped by `region_id` instead of joining to the city;
+  - t028: a fiscal-year mistake in one repeat, and in two repeats correct figures in a pivoted shape that EX can't match;
+  - t010: one over-refusal of a partly covered year.
+- **Decision:**
+  - make no prompt or code change in response to test failures. Dev gives no failure to fix from, and fixing test cases directly would tune the system to the test set. They are documented in EVAL_RESULTS instead;
+  - the t028 shape mismatch is not re-scored: changing the scorer after seeing a test failure would also bend the reported number;
+  - the critic stays off by default (D028). On test it lowered EX relabeled from 0.933 to 0.873, raised false refusals from 0.013 to 0.067, and added 36% to the cost;
+  - retrieval, repair, and few-shot stay on although their ablations were null on this schema. They are cheap, and they are what a larger schema would need. The docs say they were not measured to help here.
+- **Follow-ups worth doing on dev first:** add dev cases for "city" questions and partly covered periods, so a future fix has dev evidence; consider an EX variant that accepts a pivoted result (wide vs long) as a scorer improvement, decided before the next test run.

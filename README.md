@@ -8,7 +8,7 @@ The company, **PT Arunika Niaga**, is fictional, and all of its data is syntheti
 
 ## Guarantees
 
-All four are built and tested without an API key (see [docs/SECURITY.md](docs/SECURITY.md) for the threat-to-test table). How well a live model answers is measured separately and is not published yet.
+All four are built and tested without an API key (see [docs/SECURITY.md](docs/SECURITY.md) for the threat-to-test table). How well a live model answers is measured separately: see [Evaluation](#evaluation).
 
 1. **Read-only by construction:** SQL validator, read-only transaction, and read-only database role. Tests disable two layers at a time and show the third still blocking writes.
 2. **You only see what you're allowed to see:** row-level security enforced by Postgres with an HMAC-signed region scope, so a regional manager sees zero rows from other regions even with hand-written SQL that bypasses the validator.
@@ -21,7 +21,22 @@ _Keyless demo run on synthetic data: a rule-based stand-in replays the demo ques
 
 ## Status
 
-Phases 0-6 of 10 done: scaffold, synthetic database, safety layer (103 adversarial validator cases plus database-level attack tests, all blocked), the evaluation harness with a 100-question golden set (40 dev / 60 test) and a single-prompt baseline, the LangGraph agent (input guard, hybrid retrieval, SQL repair loop, result checks, template answers, budget guard), the FastAPI API (cookie sign-in, ask and streaming endpoints, run history, rate limit, daily spend cap, kill switch), and the React web app (live step timeline, answer card, SQL, sortable table with CSV, auto chart, history, data dictionary). No accuracy results have been published yet: the only live runs so far are on the dev split, which is used for tuning. Test-split results with repeats come in Phase 7. See [PROGRESS.md](PROGRESS.md) and, for the data, [docs/DATA.md](docs/DATA.md).
+Phases 0-7 of 10 done: scaffold, synthetic database, safety layer (103 adversarial validator cases plus database-level attack tests, all blocked), the evaluation harness with a 100-question golden set (40 dev / 60 test) and a single-prompt baseline, the LangGraph agent (input guard, hybrid retrieval, SQL repair loop, result checks, template answers, budget guard), the FastAPI API (cookie sign-in, ask and streaming endpoints, run history, rate limit, daily spend cap, kill switch), and the React web app (live step timeline, answer card, SQL, sortable table with CSV, auto chart, history, data dictionary). Phase 7 measured the agent live on the test split (below). See [PROGRESS.md](PROGRESS.md) and, for the data, [docs/DATA.md](docs/DATA.md).
+
+## Evaluation
+
+Test split, 60 questions × 3 repeats, `gpt-6-luna`, run on 2026-11-01. Full tables, caveats, and the result file behind every number are in [docs/EVAL_RESULTS.md](docs/EVAL_RESULTS.md).
+
+| System | EX relabeled | Typed numbers per run | p50 | $ / question |
+|---|---|---|---|---|
+| Agent | 0.933 ± 0.023 | 0 | 7.3 s | 0.000476 |
+| Single-prompt baseline | 0.953 ± 0.031 | 48.3 ± 1.2 | 5.3 s | 0.000291 |
+
+- **On this small schema the agent is not more accurate than the baseline:** the difference is within noise. What it adds is that every figure is filled in by code, so none needs checking by hand.
+- **Null results:** removing retrieval, repair, or few-shot examples didn't change accuracy measurably here.
+- **Negative result:** an optional critic step lowered EX to 0.873 ± 0.023 and stays off.
+- **Model comparison:** `gpt-4o-mini` scored 0.733 ± 0.046 (run on 2026-11-02) at a higher cost per question.
+- **Safety:** every run blocked 100% of unsafe requests.
 
 ## Local development
 

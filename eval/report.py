@@ -6,27 +6,28 @@ Every row links to the file it came from, so no number in the write-up is typed 
 """
 
 import json
+import statistics
 import sys
+from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
 DOCS_TO_RESULTS = "../eval/results/"
 
-COLUMNS = [
+QUALITY = [
     ("EX strict", "ex_strict"),
     ("EX lenient", "ex_lenient"),
     ("EX relabeled", "ex_relabeled"),
     ("Valid SQL", "valid_sql_rate"),
     ("Repairs", "repair_rate"),
+    ("False refusals", "false_refusal_rate"),
+    ("Assumption stated", "assumption_rate"),
     ("Refusal acc.", "refusal_accuracy"),
     ("Unsafe refused", "unsafe_refusal_rate"),
     ("Safety block", "safety_block_rate"),
     ("Typed numbers", "grounding_violations"),
-    ("p50 s", "latency_p50_ms"),
-    ("p95 s", "latency_p95_ms"),
-    ("$ / question", "cost_per_question_usd"),
-    ("Cache hit", "cache_hit_rate"),
 ]
+SPEED = [("p50 s", "latency_p50_ms"), ("p95 s", "latency_p95_ms"), ("Cache hit", "cache_hit_rate")]
 
 
 def load(path: Path) -> dict[str, Any]:
@@ -41,7 +42,7 @@ def cell(stat: dict[str, float | None], key: str, repeats: int) -> str:
         mean, std = mean / 1000, (std or 0) / 1000
         fmt = "{:.1f}"
     elif key == "cost_per_question_usd":
-        fmt = "{:.5f}"
+        fmt = "{:.6f}"
     elif key == "grounding_violations":
         fmt = "{:.1f}" if std else "{:.0f}"
     else:
@@ -50,23 +51,90 @@ def cell(stat: dict[str, float | None], key: str, repeats: int) -> str:
     return f"{shown} ± {fmt.format(std)}" if repeats > 1 else shown
 
 
-def summary_table(paths: list[Path]) -> str:
-    head = (
-        ["System", "Model", "Questions x repeats"] + [c for c, _ in COLUMNS] + ["Total $", "File"]
-    )
-    lines = ["| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
+def _link(p: Path) -> str:
+    return f"[{p.stem}]({DOCS_TO_RESULTS}{p.name})"
+
+
+def _name(r: dict[str, Any]) -> str:
+    m = r["meta"]
+    return f"{m['system']} | {m['model']} | {m['n_questions']} x {m['repeats']}"
+
+
+def _table(head: list[str], rows: list[str]) -> str:
+    return "\n".join(["| " + " | ".join(head) + " |", "|" + "---|" * len(head), *rows])
+
+
+def _missing() -> dict[str, None]:
+    return {"mean": None, "std": None}  # older files lack newer metrics
+
+
+def cost_by_repeat(r: dict[str, Any]) -> list[float]:
+    """Cost per question in each repeat, from the per-case costs (the aggregate is rounded)."""
+    by: dict[str, list[float]] = defaultdict(list)
+    for c in r["cases"]:
+        by[str(c["repeat"])].append(c["cost_usd"])
+    return [sum(v) / len(v) for _, v in sorted(by.items())]
+
+
+def quality_table(paths: list[Path]) -> str:
+    rows = []
     for p in paths:
         r = load(p)
-        m, a = r["meta"], r["aggregate"]
-        missing = {"mean": None, "std": None}  # older files lack newer metrics
-        cells = [cell(a.get(k, missing), k, m["repeats"]) for _, k in COLUMNS]
+        a, n = r["aggregate"], r["meta"]["repeats"]
+        cells = [cell(a.get(k, _missing()), k, n) for _, k in QUALITY]
+        rows.append(f"| {_name(r)} | " + " | ".join(cells) + f" | {_link(p)} |")
+    head = ["System", "Model", "Questions x repeats"] + [c for c, _ in QUALITY] + ["File"]
+    return _table(head, rows)
+
+
+def cost_table(paths: list[Path]) -> str:
+    rows = []
+    for p in paths:
+        r = load(p)
+        a, n = r["aggregate"], r["meta"]["repeats"]
+        per_q = cost_by_repeat(r)
+        std = statistics.stdev(per_q) if len(per_q) > 1 else 0.0
+        cost = cell({"mean": statistics.mean(per_q), "std": std}, "cost_per_question_usd", n)
+        cells = [cell(a.get(k, _missing()), k, n) for _, k in SPEED]
         total = sum(c["cost_usd"] for c in r["cases"])
-        lines.append(
-            f"| {m['system']} | {m['model']} | {m['n_questions']} x {m['repeats']} | "
-            + " | ".join(cells)
-            + f" | {total:.4f} | [{p.stem}]({DOCS_TO_RESULTS}{p.name}) |"
+        rows.append(
+            f"| {_name(r)} | " + " | ".join(cells) + f" | {cost} | {total:.4f} | {_link(p)} |"
         )
-    return "\n".join(lines)
+    head = ["System", "Model", "Questions x repeats"] + [c for c, _ in SPEED]
+    return _table([*head, "$ / question", "Total $", "File"], rows)
+
+
+def repeat_table(paths: list[Path]) -> str:
+    """Cache hit and cost per repeat: repeat 1 meets a cold cache, later repeats a warm one."""
+    rows = []
+    for p in paths:
+        r = load(p)
+        costs = cost_by_repeat(r)
+        for i, (rep, cost) in enumerate(zip(r["per_repeat"], costs, strict=True), start=1):
+            hit = rep.get("cache_hit_rate")
+            hit_s = "n/a" if hit is None else f"{hit:.3f}"
+            rows.append(f"| {_name(r)} | {i} | {hit_s} | {cost:.6f} | {_link(p)} |")
+    head = ["System", "Model", "Questions x repeats", "Repeat", "Cache hit", "$ / question", "File"]
+    return _table(head, rows)
+
+
+def step_table(paths: list[Path]) -> str:
+    """Tokens and cost by graph step, summed over every repeat."""
+    rows = []
+    keys = ("calls", "input", "cache_read", "cache_write", "output")
+    for p in paths:
+        r = load(p)
+        steps: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+        for rep in r["per_repeat"]:
+            for step, u in (rep.get("usage_by_step") or {}).items():
+                for k in (*keys, "cost_usd"):
+                    steps[step][k] += u[k]
+        for step, u in sorted(steps.items()):
+            nums = " | ".join(f"{int(u[k]):,}" for k in keys)
+            rows.append(f"| {_name(r)} | {step} | {nums} | {u['cost_usd']:.4f} | {_link(p)} |")
+    head = ["System", "Model", "Questions x repeats", "Step", "Calls", "Uncached input"]
+    head += ["Cache read", "Cache write", "Output", "Cost $", "File"]
+    return _table(head, rows)
 
 
 def category_table(paths: list[Path], metric: str = "ex_relabeled") -> str:
@@ -80,14 +148,31 @@ def category_table(paths: list[Path], metric: str = "ex_relabeled") -> str:
         for c in r["cases"]:
             if c.get(metric) is not None:
                 rows.setdefault(c["category"], {}).setdefault(name, []).append(bool(c[metric]))
-    lines = ["| Category | " + " | ".join(names) + " |", "|" + "---|" * (len(names) + 1)]
+    lines = []
     for cat in sorted(rows):
         vals = []
         for n in names:
             flags = rows[cat].get(n, [])
             vals.append(f"{sum(flags) / len(flags):.2f} ({len(flags)})" if flags else "n/a")
         lines.append(f"| {cat} | " + " | ".join(vals) + " |")
-    return "\n".join(lines)
+    return _table(["Category", *names], lines)
+
+
+def language_table(paths: list[Path], metric: str = "ex_relabeled") -> str:
+    """EX by question language (en, id), averaged over every repeat."""
+    rows = []
+    for p in paths:
+        r = load(p)
+        by: dict[str, list[bool]] = defaultdict(list)
+        for c in r["cases"]:
+            if c.get(metric) is not None:
+                by[c["lang"]].append(bool(c[metric]))
+        vals = [
+            f"{sum(by[lang]) / len(by[lang]):.3f} ({len(by[lang])})" if by[lang] else "n/a"
+            for lang in ("en", "id")
+        ]
+        rows.append(f"| {_name(r)} | " + " | ".join(vals) + f" | {_link(p)} |")
+    return _table(["System", "Model", "Questions x repeats", "English", "Indonesian", "File"], rows)
 
 
 def relabeled_only(paths: list[Path]) -> str:
@@ -102,11 +187,10 @@ def relabeled_only(paths: list[Path]) -> str:
 
 def main(argv: list[str]) -> int:
     paths = [Path(a) for a in argv]
-    print(summary_table(paths))
-    print()
-    print(category_table(paths))
-    print()
-    print(relabeled_only(paths))
+    tables = [quality_table, cost_table, repeat_table, step_table, category_table]
+    for table in [*tables, language_table, relabeled_only]:
+        print(table(paths))
+        print()
     return 0
 
 
