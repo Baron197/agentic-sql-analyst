@@ -13,7 +13,7 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 | 4 Agent core | **done** (2026-10-30) | all DoD items pass; see session log |
 | 5 API | **done** (2026-10-30) | all DoD items pass; see session log |
 | 6 Web app | **done** (2026-10-30) | all DoD items pass; see session log |
-| 7 Real-mode evaluation | **done** (2026-11-02), model choice awaiting Baron | DoD passes; D043 recommends `gpt-6-luna`, Baron to confirm |
+| 7 Real-mode evaluation | **done** (2026-11-02) | all DoD items pass; live model `gpt-6-luna` confirmed by Baron (D043) |
 | 8 Deploy | not started | |
 | 9 Portfolio packaging | not started | |
 
@@ -27,7 +27,6 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 
 ## Open questions for Baron
 
-- Live model: D043 recommends `gpt-6-luna` from the Phase 7 test runs (more accurate and cheaper than `gpt-4o-mini`). Baron to confirm; then set the `.env.example` and `config.py` defaults to `openai` / `gpt-6-luna` (`LLM_PROVIDER=fake` stays the default).
 - Deploy target for Phase 8: Azure (A) or the existing AWS EC2 (B).
 - GitHub repository name and visibility (only when Baron says to push). CI has not run on GitHub yet; it is only schema-validated locally.
 - License: none chosen yet (the flagship uses MIT). Add before the repo goes public.
@@ -47,14 +46,13 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 
 ## Next step
 
-1. Baron confirms the live model (D043 recommends `gpt-6-luna`); then update the `.env.example` and `config.py` defaults (provider stays `fake`).
-2. Phase 8: deploy (BUILD_GUIDE §13), only when Baron says so. Needs his answers first: deploy target (Azure or AWS EC2), GitHub repository name and visibility plus the OK to push (CI has never run on GitHub), and a license. Start with a plan.
+Phase 8: deploy (BUILD_GUIDE §13), only when Baron says so. Needs his answers first: deploy target (Azure or AWS EC2), GitHub repository name and visibility plus the OK to push (CI has never run on GitHub), and a license. Start with a plan.
 
 ## Session log
 
 _(newest first: date, what was done, decisions, issues)_
 
-### 2026-11-01 to 2026-11-02: Phase 7 real-mode evaluation (completed; model choice awaiting Baron)
+### 2026-11-01 to 2026-11-02: Phase 7 real-mode evaluation (completed)
 
 - **Before the runs (dev only):** per-step usage and cache-hit rate in the harness, `prompt_cache_key` in the OpenAI adapter, and a dev check run (40 questions, $0.0244): EX relabeled 1.0.
 - **Test runs** (60 questions × 3 repeats, approved budget $2 with a stop at 2× any estimate): agent, baseline, no-retrieval, no-repair, no-few-shot, and critic on `gpt-6-luna` (2026-11-01), and the agent on `gpt-4o-mini` (2026-11-02). Every run came in under its estimate. Total Phase 7 spend $0.6669. All safety gates passed and every run left the database unchanged.
@@ -64,10 +62,10 @@ _(newest first: date, what was done, decisions, issues)_
   - ablations: null results;
   - critic: negative (0.873);
   - `gpt-4o-mini`: 0.733 at 1.6× the cost.
-- **Decisions:** D041 (`prompt_cache_key` is a null result; the extra cost is the per-question retrieved context), D042 (two OpenAI models within budget), D043 (recommend `gpt-6-luna`; Baron to confirm), D044 (no tuning after the test run; critic stays off).
+- **Decisions:** D041 (`prompt_cache_key` is a null result; the extra cost is the per-question retrieved context), D042 (two OpenAI models within budget), D043 (`gpt-6-luna`, confirmed by Baron; `LLM_MODEL` default changed, `LLM_PROVIDER` stays `fake`), D044 (no tuning after the test run; critic stays off).
 - **DoD:**
   - every number in EVAL_RESULTS.md links to a results file (links checked);
-  - the model choice is recorded in D043 with its reasoning, awaiting Baron's confirmation;
+  - the model choice is recorded in D043 with its reasoning and Baron's confirmation;
   - CI is still keyless: `poe check` and `poe web-check` pass with no key.
 - **Also:** `eval/report.py` gained quality, cost, per-repeat, per-step, and language tables; ruff formatting fix.
 

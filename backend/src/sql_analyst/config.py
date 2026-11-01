@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     # LLM: 'fake' is keyless (tests, CI); 'anthropic' or 'openai' are live and need their key
     # and Baron's OK to run.
     llm_provider: str = "fake"
-    llm_model: str = "claude-haiku-5-5"
+    llm_model: str = "gpt-6-luna"  # the Phase 7 choice (D043)
     llm_effort: str = ""  # empty = the model's default effort
     anthropic_api_key: SecretStr = SecretStr("")
     openai_api_key: SecretStr = SecretStr("")

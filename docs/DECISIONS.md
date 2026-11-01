@@ -335,7 +335,7 @@ Short entries, newest last: context, decision, why, alternatives considered.
 - **Decision:** the test split × 3 repeats, run once, for: the agent and baseline, three ablations, and the critic on `gpt-6-luna`, plus the agent on `gpt-4o-mini`. No Anthropic models were run on the test split. Every run's cost stayed under its estimate. The total was $0.6669 (seven test runs $0.6424, plus the dev check $0.0244).
 - **Why:** `gpt-4o-mini` is the model the flagship project uses, so it is the natural comparison. The Anthropic adapter is tested keylessly. A Claude comparison can be added later with its own budget approval.
 
-## D043: The recommended live model is `gpt-6-luna` (2026-11-02, Phase 7; Baron to confirm)
+## D043: The live model is `gpt-6-luna` (2026-11-02, Phase 7; confirmed by Baron)
 
 - **Evidence** (test split, 60 questions × 3 repeats; docs/EVAL_RESULTS.md, finding 5):
   - EX relabeled: `gpt-6-luna` 0.933 ± 0.023, `gpt-4o-mini` 0.733 ± 0.046;
@@ -344,7 +344,7 @@ Short entries, newest last: context, decision, why, alternatives considered.
   - cost per question: $0.000476 vs $0.000757;
   - p50 latency: 7.3 s vs 3.3 s.
 - **Recommendation:** `LLM_PROVIDER=openai`, `LLM_MODEL=gpt-6-luna` for live mode and the Phase 8 demo. It is more accurate and cheaper; the only cost is about 4 s more median latency, which the streamed step timeline makes visible rather than idle.
-- **Status:** per BUILD_GUIDE §8.4 the choice is Baron's. The defaults in `.env.example` and `config.py` (`LLM_PROVIDER=fake`, `LLM_MODEL=claude-haiku-5-5`) change only after he confirms. Keyless stays the default either way.
+- **Status:** per BUILD_GUIDE §8.4 the choice is Baron's; he confirmed it on 2026-11-02. The `LLM_MODEL` default in `.env.example` and `config.py` changed from `claude-haiku-5-5` to `gpt-6-luna`. `LLM_PROVIDER` stays `fake`, so tests, CI, and the local demo stay keyless; live mode needs `LLM_PROVIDER=openai` and `LIVE_MODE_ENABLED=true`.
 
 ## D044: No tuning after the test run; the critic stays off (2026-11-02, Phase 7)
 
