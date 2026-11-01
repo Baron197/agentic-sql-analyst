@@ -145,6 +145,12 @@ def test_openai_adapter_uses_structured_outputs_and_subtracts_cached_tokens():
     assert stub.kwargs["text_format"] is Out and stub.kwargs["instructions"] == "SYSTEM"
     assert stub.kwargs["store"] is False
     assert not {"temperature", "top_p", "tool_choice"} & set(stub.kwargs)
+    # Same system prompt -> same cache key; a different prompt -> a different one.
+    key = stub.kwargs["prompt_cache_key"]
+    llm.generate_structured("SYSTEM", [Message(role="user", content="other q")], Out)
+    assert stub.kwargs["prompt_cache_key"] == key and key.startswith("sqla-")
+    llm.generate_structured("ANOTHER", [Message(role="user", content="q")], Out)
+    assert stub.kwargs["prompt_cache_key"] != key
     assert (usage.input_tokens, usage.cache_read_tokens, usage.output_tokens) == (2_000, 8_000, 300)
     assert usage.model == "gpt-4o-mini"  # billed by the requested id, not the dated snapshot
     expected = (2_000 * 0.15 + 8_000 * 0.075 + 300 * 0.60) / 1_000_000

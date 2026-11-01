@@ -98,9 +98,11 @@ class BaselineSystem:
                 max_tokens=8_000,
             )
             pred.usages.append(usage)
+            pred.call_steps.append("sql")
         except LLMError as e:
             if e.usage:
                 pred.usages.append(e.usage)
+                pred.call_steps.append("sql")
             pred.error_code, pred.error_message = "llm_error", str(e)
             pred.latency_ms = _ms(started)
             return pred
@@ -133,9 +135,11 @@ class BaselineSystem:
         except LLMError as e:
             if e.usage:
                 pred.usages.append(e.usage)
+                pred.call_steps.append("answer")
             pred.error_code, pred.error_message = "llm_error_answer", str(e)
             return
         pred.usages.append(usage)
+        pred.call_steps.append("answer")
         pred.answer = final.answer
 
 

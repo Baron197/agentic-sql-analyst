@@ -1,10 +1,14 @@
 """OpenAI adapter: structured outputs via the Responses API (`client.responses.parse`).
 
 The system prompt goes in `instructions`; OpenAI caches long identical prefixes
-automatically. `input_tokens` from the API includes cached tokens, so the uncached part
-is input_tokens - cached_tokens. Responses are not stored (`store=False`).
+automatically. Each call also sends `prompt_cache_key`, derived from the system prompt, so
+calls that share a prompt are routed to the same cache: without it the agent's SQL prompt
+was rewritten to the cache on most questions (docs/DECISIONS.md D041). `input_tokens`
+from the API includes cached tokens, so the uncached part is input_tokens - cached_tokens.
+Responses are not stored (`store=False`).
 """
 
+import hashlib
 import time
 from typing import Any
 
@@ -43,6 +47,7 @@ class OpenAILLM(LLMClient):
             "text_format": schema,
             "max_output_tokens": max_tokens,
             "store": False,
+            "prompt_cache_key": cache_key(system),
         }
         if self.effort:  # reasoning models only
             kwargs["reasoning"] = {"effort": self.effort}
@@ -84,6 +89,11 @@ class OpenAILLM(LLMClient):
             cost_usd=cost_usd(model, uncached, u.output_tokens, cached, written),
             latency_ms=round(latency_ms, 1),
         )
+
+
+def cache_key(system: str) -> str:
+    """Stable per system prompt: same prompt, same key (no user data in it)."""
+    return "sqla-" + hashlib.sha256(system.encode("utf-8")).hexdigest()[:16]
 
 
 def _refusal_text(response: Any) -> str:

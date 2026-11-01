@@ -21,6 +21,7 @@ def to_prediction(case_id: str, r: AgentResult) -> Prediction:
         error_code=(r.error or "").split(":")[0] or None,
         error_message=r.error,
         usages=[c.usage for c in r.llm_calls],
+        call_steps=[c.node for c in r.llm_calls],
         latency_ms=r.elapsed_ms,
         repairs=r.repairs,
     )

@@ -76,6 +76,7 @@ class CaseScore(BaseModel):
     output_tokens: int = 0
     cache_read_tokens: int = 0
     cache_write_tokens: int = 0
+    calls: list[dict[str, Any]] = []  # per model call: step, tokens, cost, latency
     sql: str | None = None
     assumptions: list[str] = []
     answer: str | None = None
@@ -93,6 +94,12 @@ def score_case(
         output_tokens=sum(u.output_tokens for u in pred.usages),
         cache_read_tokens=sum(u.cache_read_tokens for u in pred.usages),
         cache_write_tokens=sum(u.cache_write_tokens for u in pred.usages),
+        calls=[
+            {"step": step, "input": u.input_tokens, "cache_read": u.cache_read_tokens,
+             "cache_write": u.cache_write_tokens, "output": u.output_tokens,
+             "cost_usd": u.cost_usd, "latency_ms": u.latency_ms}
+            for step, u in zip(pred.call_steps or ["?"] * len(pred.usages), pred.usages, strict=True)
+        ],
         sql=pred.sql, assumptions=pred.assumptions, answer=pred.answer, repairs=pred.repairs,
         rows_preview=json.loads(json.dumps(pred.rows[:5], default=str)),
     )  # fmt: skip
@@ -166,15 +173,46 @@ def summarize(scores: list[CaseScore]) -> dict[str, Any]:
         "output_tokens": sum(s.output_tokens for s in scores),
         "cache_read_tokens": sum(s.cache_read_tokens for s in scores),
         "cache_write_tokens": sum(s.cache_write_tokens for s in scores),
+        # Share of all input tokens served from the provider's prompt cache.
+        "cache_hit_rate": _cache_hit_rate(scores),
+        "usage_by_step": _usage_by_step(scores),
         "ex_lenient_by_category": {k: rate(v) for k, v in sorted(by_cat.items())},
         "errors": sorted({s.error_code for s in scores if s.error_code}),
     }
 
 
+def _cache_hit_rate(scores: list[CaseScore]) -> float | None:
+    read = sum(s.cache_read_tokens for s in scores)
+    total = read + sum(s.input_tokens + s.cache_write_tokens for s in scores)
+    return round(read / total, 4) if total else None
+
+
+def _usage_by_step(scores: list[CaseScore]) -> dict[str, dict[str, float]]:
+    out: dict[str, dict[str, float]] = {}
+    for s in scores:
+        for c in s.calls:
+            agg = out.setdefault(
+                c["step"],
+                {
+                    "calls": 0,
+                    "input": 0,
+                    "cache_read": 0,
+                    "cache_write": 0,
+                    "output": 0,
+                    "cost_usd": 0.0,
+                },
+            )
+            agg["calls"] += 1
+            for k in ("input", "cache_read", "cache_write", "output"):
+                agg[k] += c[k]
+            agg["cost_usd"] = round(agg["cost_usd"] + c["cost_usd"], 6)
+    return dict(sorted(out.items()))
+
+
 AGGREGATED = [
     "ex_strict", "ex_lenient", "ex_relabeled", "valid_sql_rate", "repair_rate", "false_refusal_rate", "refusal_accuracy",
     "unsafe_refusal_rate", "safety_block_rate", "assumption_rate", "grounding_violations",
-    "latency_p50_ms", "latency_p95_ms", "cost_per_question_usd", "total_cost_usd",
+    "latency_p50_ms", "latency_p95_ms", "cost_per_question_usd", "total_cost_usd", "cache_hit_rate",
 ]  # fmt: skip
 
 
@@ -344,6 +382,20 @@ def render_markdown(
             + ", ".join(f"`{c}`" for c in relabeled_only)
             + ".",
         ]
+    by_step = per_repeat[0].get("usage_by_step") or {}
+    if by_step:
+        lines += [
+            "",
+            "## Model calls by step, first repeat",
+            "",
+            "| Step | Calls | Uncached input | Cache read | Cache write | Output | Cost (USD) |",
+            "|---|---|---|---|---|---|---|",
+        ]
+        for step, u in by_step.items():
+            lines.append(
+                f"| {step} | {u['calls']} | {u['input']:,} | {u['cache_read']:,} | "
+                f"{u['cache_write']:,} | {u['output']:,} | {u['cost_usd']} |"
+            )
     lines += ["", "## EX (lenient) by category, first repeat", "", "| Category | EX |", "|---|---|"]
     for cat, v in per_repeat[0]["ex_lenient_by_category"].items():
         lines.append(f"| {cat} | {v} |")

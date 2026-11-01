@@ -31,6 +31,7 @@ class Prediction(BaseModel):
     model_text: str | None = None
     repairs: int | None = None  # attempts sent back to SQL generation (None: no repair loop)
     usages: list[Usage] = Field(default_factory=list)
+    call_steps: list[str] = Field(default_factory=list)  # the step of each usage (same order)
     latency_ms: float = 0.0
 
     @property
