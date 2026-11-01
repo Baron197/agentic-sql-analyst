@@ -51,7 +51,9 @@ def cell(stat: dict[str, float | None], key: str, repeats: int) -> str:
 
 
 def summary_table(paths: list[Path]) -> str:
-    head = ["System", "Model", "Questions x repeats"] + [c for c, _ in COLUMNS] + ["Total $", "File"]
+    head = (
+        ["System", "Model", "Questions x repeats"] + [c for c, _ in COLUMNS] + ["Total $", "File"]
+    )
     lines = ["| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
     for p in paths:
         r = load(p)
