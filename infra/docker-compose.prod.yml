@@ -1,0 +1,109 @@
+# Production stack (Phase 8): Caddy (web) -> API -> Postgres. Only Caddy publishes ports.
+# Run it through infra/compose.sh, which passes the env file (docs/DEPLOYMENT.md):
+#   infra/compose.sh build
+#   infra/compose.sh run --rm seed     # once, and after a data change
+#   infra/compose.sh up -d
+name: sql-analyst
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-hardening: &hardening
+  read_only: true
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-arunika}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in the env file}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    mem_limit: 512m
+    restart: unless-stopped
+    logging: *logging
+
+  api:
+    <<: *hardening
+    build:
+      context: ..
+      dockerfile: infra/api.Dockerfile
+    image: sql-analyst-api
+    env_file: ${ENV_FILE:-../.env}
+    environment:
+      POSTGRES_HOST: db
+      # The API never gets the owner password: it uses only nlq_reader and app_writer.
+      POSTGRES_PASSWORD: ""
+    tmpfs:
+      - /tmp
+    depends_on:
+      db:
+        condition: service_healthy
+    mem_limit: 1g
+    restart: unless-stopped
+    logging: *logging
+
+  web:
+    <<: *hardening
+    build:
+      context: ..
+      dockerfile: infra/web.Dockerfile
+    image: sql-analyst-web
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    cap_add:
+      - NET_BIND_SERVICE
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-443}:443/udp"
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    tmpfs:
+      - /tmp
+    depends_on:
+      api:
+        condition: service_healthy
+    mem_limit: 128m
+    restart: unless-stopped
+    logging: *logging
+
+  # One-off: build the schemas, load the seed, build the retrieval index, set up the API's
+  # schema and demo users. Uses the owner login, so it runs only when asked.
+  seed:
+    <<: *hardening
+    image: sql-analyst-api
+    profiles: ["setup"]
+    env_file: ${ENV_FILE:-../.env}
+    environment:
+      POSTGRES_HOST: db
+    tmpfs:
+      - /tmp
+    command:
+      - sh
+      - -c
+      - python -m sql_analyst.db.load && python -m sql_analyst.retrieval.index && python -m sql_analyst.db.app_setup
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    logging: *logging
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:

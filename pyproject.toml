@@ -124,6 +124,10 @@ shell = "npm --prefix web run e2e"
 help = "Screenshots of the sign-in and Ask pages at 375 px and 1280 px into docs/screenshots/"
 shell = "npm --prefix web run screenshots"
 
+[tool.poe.tasks.smoke-public]
+help = "Smoke-test a deployed stack: --url https://HOST [--ask] [--expect-status 429|503] (--ask is paid in live mode)"
+cmd = "python infra/smoke_public.py"
+
 [tool.poe.tasks.eval]
 help = "Run the evaluation harness: --system gold|baseline --mode keyless|live --split dev|test (see eval/run_eval.py)"
 cmd = "python -m eval.run_eval"

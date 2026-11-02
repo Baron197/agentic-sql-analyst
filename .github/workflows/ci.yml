@@ -101,4 +101,27 @@ jobs:
       - name: Lint, format check, typecheck, unit tests, build
         run: npm run check
 
-  # docker: image build (Phase 8)
+  # The production stack (infra/), built and run keyless with a throwaway env file.
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ENV_FILE: ${{ runner.temp }}/prod.env
+    steps:
+      - uses: actions/checkout@v7
+      - name: Throwaway keyless env file (random values, plain HTTP)
+        run: infra/make-env.sh :80 --keyless
+      - name: Build the images
+        run: infra/compose.sh build
+      - name: Seed (schemas, data, retrieval index, demo users)
+        run: infra/compose.sh run --rm seed
+      - name: Start the stack
+        run: infra/compose.sh up -d --wait
+      - name: Smoke test through Caddy (keyless)
+        run: python3 infra/smoke_public.py --url http://127.0.0.1 --ask
+      - name: Logs
+        if: failure()
+        run: infra/compose.sh logs --tail 100
+      - name: Stop
+        if: always()
+        run: infra/compose.sh down -v

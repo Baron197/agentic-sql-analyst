@@ -1,0 +1,16 @@
+# Allow-list: images get only what they need. Never .env, runs/, .cache/, or .git.
+*
+!pyproject.toml
+!uv.lock
+!README.md
+!LICENSE
+!backend/src/
+!data/
+!web/
+!infra/Caddyfile
+
+**/__pycache__
+web/node_modules
+web/dist
+web/test-results
+web/playwright-report
