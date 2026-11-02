@@ -14,6 +14,14 @@ export interface AuthOptions {
   demo_users: { key: string; email: string; role: string }[];
 }
 
+// GET /api/health (public): the header shows which model answers.
+export interface Health {
+  status: "ok" | "degraded";
+  mode: "live" | "keyless";
+  live_mode_enabled: boolean;
+  model: string;
+}
+
 export type ChartType = "kpi" | "bar" | "line" | "table";
 
 export interface Chart {

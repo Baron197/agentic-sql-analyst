@@ -269,6 +269,16 @@ def test_finalize_records_model_text_and_filters_assumptions(run_store):
     assert r.record()["run_id"] == "abc"
 
 
+def test_stored_runs_keep_numeric_results_as_json_numbers(run_store):
+    # Postgres numerics are Decimals; pydantic would store them as strings, and the History
+    # page's chart (which needs numbers) came out empty.
+    rows = [["app", Decimal("3884159317.50")], ["store", Decimal("9285162700")], ["web", None]]
+    state = _state(status="answered", answer="x", result=_result(["channel", "net"], rows))
+    r = finalize(state, make_deps(ScriptedLLM(), run_store=run_store))["response"]
+    assert r.record()["rows"] == [["app", 3884159317.5], ["store", 9285162700], ["web", None]]
+    assert r.rows[0][1] == Decimal("3884159317.50")  # in Python the exact value stays
+
+
 def test_finalize_partial_without_a_result_explains_the_stop():
     state = _state(status="partial", stop_reason="time limit reached (1 s)", lang="id")
     r = finalize(state, make_deps(ScriptedLLM()))["response"]

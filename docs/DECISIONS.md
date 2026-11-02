@@ -393,3 +393,12 @@ Short entries, newest last: context, decision, why, alternatives considered.
   - only live runs are published (keyless runs replay a script), and the published form drops the user and session ids, the retrieved context, and the per-call details. Baron picks which runs to publish, and the pages say they are hand-picked, refusals included, with accuracy in EVAL_RESULTS.
 - **Why:** per-session history fixes the leak without accounts for visitors. A committed file is free to serve, works when live mode is off or the budget is used up, and is reviewable in git before it goes public.
 - **Alternatives:** hide History for demo users (simpler, but visitors lose their own history); a per-visitor anonymous account (more rows in `app.users` and a cleanup job); publishing runs straight from the database (visitors' questions would go public without review).
+
+## D049: Result numbers stay numbers in stored JSON; the app shows which model answers (2026-11-02, Phase 8)
+
+- **Context:** Baron's first live run showed an empty bar chart on its History page, though the same answer charted fine while streaming. Postgres returns `numeric` as `Decimal`, and pydantic writes a `Decimal` to JSON as a string; the stream used FastAPI's encoder (numbers), but the stored run, `POST /api/ask`, and `ask --json` used pydantic (strings), and the chart drops non-numbers. Separately, nothing on screen said whether new questions go to a live model or the keyless stand-in.
+- **Decision:**
+  - a `Cell` type (`agent/state.py`) for result cells: in JSON a `Decimal` becomes an int when whole, else a float, as FastAPI's encoder does. `ResultTable`, `AgentResult`, and `AskResponse` rows use it, so every output path agrees. Python code keeps the exact `Decimal`. Runs stored before this keep their strings; the one local run was converted by hand;
+  - `GET /api/health` (public) also returns the model, and the header shows a badge: "Live · gpt-6-luna", "Live off · …" (kill switch), or "Keyless mode". Each History row shows its run's mode and model, and Run details has a Mode row.
+- **Why:** one serializer for rows avoids the next mismatch between paths. The model name isn't secret, and visitors should know whether they are reading a real model's answer.
+- **Alternatives:** coerce numeric strings in the chart (hides the bug: the table, `POST /api/ask`, and `--json` would still get strings); a float for every `Decimal` (whole numbers would show as `9285162700.0` in `--json`).

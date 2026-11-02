@@ -5,7 +5,7 @@ import { ApiError, api } from "../api/client";
 import type { RunSummary } from "../api/types";
 import { RunResult } from "../components/RunResult";
 import { formatMs, formatUsd } from "../lib/format";
-import { STATUS_TONE, fromRecord } from "../lib/run";
+import { MODE_TONE, STATUS_TONE, fromRecord, runMode } from "../lib/run";
 import type { RunView } from "../lib/run";
 
 export function HistoryPage() {
@@ -52,6 +52,9 @@ export function HistoryPage() {
                 <span className="min-w-0 flex-1 truncate text-ink">{r.question}</span>
                 <span className="flex shrink-0 items-center gap-3 text-xs text-ink-mute">
                   <span className={STATUS_TONE[r.status]}>{r.status}</span>
+                  <span className={`chip px-2 py-0 font-mono ${MODE_TONE(r.keyless)}`}>
+                    {runMode(r.keyless, r.model)}
+                  </span>
                   <span>
                     {new Date(r.created_at).toLocaleString("en-GB", {
                       dateStyle: "medium",
@@ -59,7 +62,7 @@ export function HistoryPage() {
                     })}
                   </span>
                   <span className="font-mono">{formatMs(r.elapsed_ms)}</span>
-                  <span className="font-mono">{r.keyless ? "keyless" : formatUsd(r.cost_usd)}</span>
+                  <span className="font-mono">{formatUsd(r.cost_usd)}</span>
                 </span>
               </Link>
             </li>

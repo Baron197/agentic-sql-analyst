@@ -1,12 +1,13 @@
 """Request and response bodies (BUILD_GUIDE §10)."""
 
-from typing import Any, Literal
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
 from sql_analyst.agent.guard import MAX_QUESTION_CHARS
 from sql_analyst.agent.nodes.finalize import AgentResult
 from sql_analyst.agent.schemas import ChartSpec
+from sql_analyst.agent.state import Cell
 
 STREAM_ROWS = 200  # rows sent in the stream's `rows` event
 
@@ -60,7 +61,7 @@ class AskResponse(BaseModel):
     answer: str | None
     sql: str | None
     columns: list[str]
-    rows: list[list[Any]]
+    rows: list[list[Cell]]
     row_count: int
     truncated: bool
     chart: ChartSpec | None

@@ -31,7 +31,9 @@ def test_every_route_but_health_and_login_needs_a_session(client, method, path):
 
 
 def test_health_and_docs_are_public(client):
-    assert client.get("/api/health").json()["status"] == "ok"
+    health = client.get("/api/health").json()
+    assert health["status"] == "ok"
+    assert (health["mode"], health["model"]) == ("keyless", "fake-keyless")  # the header shows it
     assert client.get("/api/openapi.json").status_code == 200
 
 

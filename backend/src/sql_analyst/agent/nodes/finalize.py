@@ -13,6 +13,7 @@ from sql_analyst.agent.render import fill, strip_slots
 from sql_analyst.agent.schemas import ChartSpec
 from sql_analyst.agent.state import (
     AgentState,
+    Cell,
     Refusal,
     RetrievedContext,
     SQLAttempt,
@@ -43,7 +44,7 @@ class AgentResult(BaseModel):
     caveats: list[str]
     sql: str | None
     columns: list[str]
-    rows: list[list[Any]]
+    rows: list[list[Cell]]
     row_count: int
     truncated: bool
     chart: ChartSpec | None

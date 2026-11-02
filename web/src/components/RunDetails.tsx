@@ -4,6 +4,7 @@ import { formatMs, formatUsd } from "../lib/format";
 export function RunDetails({ done }: { done: DoneEvent }) {
   const u = done.usage;
   const rows: [string, string][] = [
+    ["Mode", u.keyless ? "Keyless (no model)" : "Live model"],
     ["Model", u.model],
     ["LLM calls", String(u.llm_calls)],
     [

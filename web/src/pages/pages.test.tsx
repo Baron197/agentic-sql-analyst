@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AuthProvider } from "../auth";
 import { AskPage } from "./AskPage";
+import { HistoryPage } from "./HistoryPage";
 import { LoginPage } from "./LoginPage";
 import { RecordedRunPage, RecordedRunsPage } from "./RecordedPage";
 
@@ -265,5 +266,45 @@ describe("Recorded runs (public)", () => {
     mockFetch({ "/api/recorded-runs": () => json({ runs: [] }) });
     renderAt("/recorded/nope");
     expect(await screen.findByRole("alert")).toHaveTextContent("No such recorded run.");
+  });
+});
+
+describe("HistoryPage", () => {
+  it("shows whether each run used a live model or the keyless stand-in", async () => {
+    const run = { created_at: "2026-11-02T14:05:00+07:00", status: "answered", elapsed_ms: 900 };
+    mockFetch({
+      "/api/runs": () =>
+        json({
+          runs: [
+            {
+              ...run,
+              run_id: "a",
+              question: "Live one",
+              model: "gpt-6-luna",
+              keyless: false,
+              cost_usd: 0.001185,
+            },
+            {
+              ...run,
+              run_id: "b",
+              question: "Keyless one",
+              model: "fake-keyless",
+              keyless: true,
+              cost_usd: 0,
+            },
+          ],
+        }),
+    });
+    render(
+      <MemoryRouter>
+        <HistoryPage />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole("link", { name: /Live one/ })).toHaveTextContent(
+      "Live · gpt-6-luna",
+    );
+    expect(screen.getByRole("link", { name: /Keyless one/ })).toHaveTextContent(
+      "Keyless (no model)",
+    );
   });
 });

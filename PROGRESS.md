@@ -56,6 +56,12 @@ Phase 8, recorded runs then the server part (plans approved by Baron on 2026-11-
 
 _(newest first: date, what was done, decisions, issues)_
 
+### 2026-11-02: History chart fix; live/keyless mode shown in the app (D049)
+
+- **Bug (found by Baron):** the first live run's History page showed an empty bar chart. Stored runs had result numbers as strings (pydantic writes `Decimal` as a string); the stream didn't. Fixed with a `Cell` type for result rows, so stored runs, `POST /api/ask`, and `ask --json` all write numbers. The one run stored before the fix was converted in the local stack's database.
+- **Mode and model on screen:** a header badge from `GET /api/health` ("Live · gpt-6-luna", "Live off", or "Keyless mode"); each History row shows its run's mode and model; Run details has a Mode row.
+- **Verified:** `poe check` (752 tests), the web check in a Node container (30 tests, lint, Prettier, typecheck, build), the local stack rebuilt, the stored run returned with numeric rows through the API, and the badge in Chromium at desktop and 375 px width.
+
 ### 2026-11-02: per-session demo history and recorded live runs (D048)
 
 - **Found while planning recorded runs:** all one-click demo visitors share `analyst@demo`, so History would have shown every visitor's questions to everyone. Fixed before any public deploy: a demo sign-in gets a random session id in its token, runs store it (`app.runs.session_id`, added by `app-setup`), and History filters by it. The sign-in page now says questions are stored and demo history stays in the browser session.

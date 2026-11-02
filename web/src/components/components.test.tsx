@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import type { AnswerEvent, RowsEvent } from "../api/types";
+import { modeOf } from "../lib/run";
 import { AnswerCard } from "./AnswerCard";
 import { AutoChart } from "./AutoChart";
 import { PAGE_SIZE, ResultTable } from "./ResultTable";
@@ -153,5 +154,26 @@ describe("AutoChart", () => {
     expect(container).toBeEmptyDOMElement();
     rerender(<AutoChart chart={{ type: "bar", x: "city", y: "revenue" }} result={result} />);
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe("ModeBadge", () => {
+  const health = {
+    status: "ok",
+    mode: "live",
+    live_mode_enabled: true,
+    model: "gpt-6-luna",
+  } as const;
+
+  it("names the live model, says when live mode is off, and flags keyless mode", () => {
+    expect(modeOf(health)).toMatchObject({ tone: "live", label: "Live · gpt-6-luna" });
+    expect(modeOf({ ...health, live_mode_enabled: false })).toMatchObject({
+      tone: "off",
+      label: "Live off · gpt-6-luna",
+    });
+    expect(modeOf({ ...health, mode: "keyless", model: "fake-keyless" })).toMatchObject({
+      tone: "keyless",
+      label: "Keyless mode",
+    });
   });
 });

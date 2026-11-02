@@ -5,9 +5,10 @@ Nodes return partial updates. `sql_attempts`, `trace`, and `llm_calls` are appen
 """
 
 import operator
+from decimal import Decimal
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PlainSerializer
 
 from sql_analyst.agent.guard import RefusalKind
 from sql_analyst.agent.schemas import ChartSpec
@@ -60,9 +61,23 @@ class SQLAttempt(BaseModel):
     error: str | None = None
 
 
+def _json_cell(value: Any) -> Any:
+    """Postgres numerics arrive as Decimal, which pydantic writes to JSON as a string.
+    Write a number instead, as the stream does, so stored runs chart and format alike."""
+    if isinstance(value, Decimal):
+        if value.is_finite() and value == value.to_integral_value():
+            return int(value)
+        return float(value)
+    return value
+
+
+# A result cell. Every model that carries result rows uses it, so JSON always gets numbers.
+Cell = Annotated[Any, PlainSerializer(_json_cell, when_used="json")]
+
+
 class ResultTable(BaseModel):
     columns: list[str]
-    rows: list[list[Any]]
+    rows: list[list[Cell]]
     row_count: int
     truncated: bool
     plan_cost: float = 0.0

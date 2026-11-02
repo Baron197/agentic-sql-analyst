@@ -8,6 +8,7 @@ import type {
   DoneEvent,
   ErrorEvent,
   Example,
+  Health,
   Me,
   RecordedRun,
   RowsEvent,
@@ -68,6 +69,7 @@ const post = <T>(path: string, body?: unknown) =>
 
 export const api = {
   me: () => call<Me>("/api/me"),
+  health: () => call<Health>("/api/health"),
   authOptions: () => call<AuthOptions>("/api/auth/options"),
   login: (email: string, password: string) => post<Me>("/api/auth/login", { email, password }),
   demoLogin: (user: string) => post<Me>("/api/auth/demo", { user }),

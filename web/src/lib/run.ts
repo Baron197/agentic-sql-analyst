@@ -4,6 +4,7 @@ import type {
   AnswerEvent,
   DoneEvent,
   ErrorEvent,
+  Health,
   RowsEvent,
   RunRecord,
   StepEvent,
@@ -31,6 +32,41 @@ export const STATUS_TONE: Record<string, string> = {
   partial: "text-warn",
   error: "text-danger",
 };
+
+/** How a run was answered: a live model (by name) or the keyless stand-in. */
+export const runMode = (keyless: boolean, model: string) =>
+  keyless ? "Keyless (no model)" : `Live · ${model}`;
+
+export const MODE_TONE = (keyless: boolean) =>
+  keyless ? "border-warn/40 text-warn" : "border-accent/40 text-accent-soft";
+
+/** The header badge for GET /api/health: which model answers new questions right now. */
+export function modeOf(h: Health): {
+  tone: "live" | "off" | "keyless";
+  label: string;
+  title: string;
+} {
+  if (h.mode === "keyless") {
+    return {
+      tone: "keyless",
+      label: "Keyless mode",
+      title:
+        "No model is called: a rule-based stand-in answers the demo questions. SQL, safety checks, and the database run for real.",
+    };
+  }
+  if (!h.live_mode_enabled) {
+    return {
+      tone: "off",
+      label: `Live off · ${h.model}`,
+      title: "Live mode is switched off: new questions are refused until it is back on.",
+    };
+  }
+  return {
+    tone: "live",
+    label: `Live · ${h.model}`,
+    title: `New questions are answered by ${h.model}, a paid model, within a daily budget.`,
+  };
+}
 
 export interface RunView {
   phase: "idle" | "running" | "done" | "error";

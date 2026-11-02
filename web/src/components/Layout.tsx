@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from "react-router";
 
 import { useAuth } from "../auth";
+import { ModeBadge } from "./ModeBadge";
 
 const NAV = [
   { to: "/", label: "Ask", end: true },
@@ -71,13 +72,16 @@ export function Layout() {
               </NavLink>
             ))}
           </nav>
+          <div className="ml-auto">
+            <ModeBadge />
+          </div>
           {user === null && (
-            <NavLink to="/login" className="btn-primary ml-auto px-3 py-1.5 text-sm">
+            <NavLink to="/login" className="btn-primary px-3 py-1.5 text-sm">
               Sign in to ask
             </NavLink>
           )}
           {user && (
-            <div className="ml-auto flex items-center gap-3">
+            <div className="flex items-center gap-3">
               <span className="hidden text-right text-xs leading-tight sm:block">
                 <span className="block text-ink-soft">{user.user_id}</span>
                 <span className="text-ink-mute">

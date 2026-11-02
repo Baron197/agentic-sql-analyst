@@ -28,6 +28,7 @@ def health(res: Res) -> dict[str, Any]:
         **checks,
         "mode": "live" if res.live else "keyless",
         "live_mode_enabled": res.settings.live_mode_enabled,
+        "model": res.agent.deps.llm.model,  # the web app's header shows which one answers
     }
 
 
