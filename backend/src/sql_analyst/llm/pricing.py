@@ -3,14 +3,16 @@
 Sources:
 - Anthropic list prices (claude-api skill, cached 2026-10-06; checked 2026-10-30).
   Cache writes are the 5-minute TTL rate.
-- OpenAI standard-tier prices (developers.openai.com/api/docs/pricing, read 2026-10-30).
-  The page lists no cache-write price; we assume writes cost the normal input rate.
+- OpenAI standard-tier prices (developers.openai.com/api/docs/pricing, read 2026-11-02).
+  Cache writes use the listed 30-minute write price where the page has one (gpt-6-luna,
+  gpt-6.1-terra); it matched the OpenAI dashboard's November bill to the cent (D053). For
+  models with no listed write price we assume the normal input rate.
 Update this table, with a date, when prices change.
 """
 
 from dataclasses import dataclass
 
-PRICES_AS_OF = "anthropic 2026-10-06, openai 2026-10-30"
+PRICES_AS_OF = "anthropic 2026-10-06, openai 2026-11-02"
 
 
 @dataclass(frozen=True)
@@ -28,9 +30,9 @@ PRICES: dict[str, Price] = {
     "claude-opus-5-5": Price(input=4.00, output=20.00, cache_read=0.20, cache_write=5.00),
     # OpenAI (short context, standard tier)
     "gpt-4o-mini": Price(input=0.15, output=0.60, cache_read=0.075, cache_write=0.15),
-    "gpt-6-luna": Price(input=0.10, output=0.50, cache_read=0.01, cache_write=0.10),
+    "gpt-6-luna": Price(input=0.10, output=0.50, cache_read=0.01, cache_write=0.125),
     "gpt-5-mini": Price(input=0.25, output=2.00, cache_read=0.025, cache_write=0.25),
-    "gpt-6.1-terra": Price(input=1.00, output=5.00, cache_read=0.05, cache_write=1.00),
+    "gpt-6.1-terra": Price(input=1.00, output=5.00, cache_read=0.05, cache_write=1.25),
     "fake-keyless": Price(input=0.0, output=0.0, cache_read=0.0, cache_write=0.0),
 }
 LONG_PROMPT_THRESHOLD = 100_000

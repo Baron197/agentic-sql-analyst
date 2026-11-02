@@ -6,22 +6,23 @@ Real answers from the agent with a live model, recorded in the app and replayed 
 
 - **Hand-picked, not a benchmark.** These runs were chosen to show how the system behaves, refusals included. Measured accuracy is in [EVAL_RESULTS.md](EVAL_RESULTS.md).
 - **Every number in an answer was filled in by code** from the result rows; the model writes a template with slots, not the figures.
+- Costs are priced from each run's token counts (anthropic 2026-10-06, openai 2026-11-02 prices, `llm/pricing.py`).
 - The same runs are on the web app's public *Recorded runs* page.
 
 | # | Question | Status | Model | Latency | Cost |
 |---|---|---|---|---|---|
-| 1 | What was net revenue by sales channel in Q1 2026? | answered | `gpt-6-luna` | 15.0 s | $0.001185 |
+| 1 | What was net revenue by sales channel in Q1 2026? | answered | `gpt-6-luna` | 15.0 s | $0.001368 |
 | 2 | Delete all orders from 2024. | refused | no model call | 7 ms | $0.000000 |
 | 3 | Tampilkan alamat email semua pelanggan. | refused | no model call | 2 ms | $0.000000 |
-| 4 | How many orders were placed in December 2026? | refused | `gpt-6-luna` | 6.7 s | $0.000691 |
-| 5 | How many orders were placed in September 2026? | answered | `gpt-6-luna` | 5.5 s | $0.000582 |
-| 6 | Berapa pelanggan baru yang mendaftar setiap bulan selama 2025? | answered | `gpt-6-luna` | 14.4 s | $0.000953 |
-| 7 | How many orders were placed each month in 2025? | answered | `gpt-6-luna` | 8.3 s | $0.000791 |
-| 8 | Metode pembayaran apa yang paling sering dipakai pada tahun 2026? | answered | `gpt-6-luna` | 11.2 s | $0.000873 |
+| 4 | How many orders were placed in December 2026? | refused | `gpt-6-luna` | 6.7 s | $0.000839 |
+| 5 | How many orders were placed in September 2026? | answered | `gpt-6-luna` | 5.5 s | $0.000666 |
+| 6 | Berapa pelanggan baru yang mendaftar setiap bulan selama 2025? | answered | `gpt-6-luna` | 14.4 s | $0.001079 |
+| 7 | How many orders were placed each month in 2025? | answered | `gpt-6-luna` | 8.3 s | $0.000905 |
+| 8 | Metode pembayaran apa yang paling sering dipakai pada tahun 2026? | answered | `gpt-6-luna` | 11.2 s | $0.000961 |
 
 ## 1. What was net revenue by sales channel in Q1 2026?
 
-Recorded 2026-11-02 · signed in as analyst (all regions) · English · `gpt-6-luna` · 2 model calls · 7,339 input / 902 output tokens · 15.0 s · $0.001185
+Recorded 2026-11-02 · signed in as analyst (all regions) · English · `gpt-6-luna` · 2 model calls · 7,339 input / 902 output tokens · 15.0 s · $0.001368
 
 **Answer (answered):** Net revenue by sales channel for Q1 2026, interpreted as calendar Q1 rather than fiscal Q1, was IDR 3.88B for app, IDR 2.26B for marketplace, IDR 9.29B for store, and IDR 2.41B for website.
 
@@ -58,7 +59,7 @@ Recorded 2026-11-02 · signed in as analyst (all regions) · Bahasa Indonesia ·
 
 ## 4. How many orders were placed in December 2026?
 
-Recorded 2026-11-02 · signed in as analyst (all regions) · English · `gpt-6-luna` · 1 model call · 5,913 input / 200 output tokens · 6.7 s · $0.000691
+Recorded 2026-11-02 · signed in as analyst (all regions) · English · `gpt-6-luna` · 1 model call · 5,913 input / 200 output tokens · 6.7 s · $0.000839
 
 **Refused by the model:** I can't answer that from the available data.
 
@@ -67,7 +68,7 @@ Recorded 2026-11-02 · signed in as analyst (all regions) · English · `gpt-6-l
 
 ## 5. How many orders were placed in September 2026?
 
-Recorded 2026-11-02 · signed in as analyst (all regions) · English · `gpt-6-luna` · 2 model calls · 6,181 input / 294 output tokens · 5.5 s · $0.000582
+Recorded 2026-11-02 · signed in as analyst (all regions) · English · `gpt-6-luna` · 2 model calls · 6,181 input / 294 output tokens · 5.5 s · $0.000666
 
 **Answer (answered):** There were 2,110 orders placed in September 2026, including cancelled orders.
 
@@ -87,7 +88,7 @@ Showing 1 of 1 rows.
 
 ## 6. Berapa pelanggan baru yang mendaftar setiap bulan selama 2025?
 
-Recorded 2026-11-02 · signed in as analyst (all regions) · Bahasa Indonesia · `gpt-6-luna` · 2 model calls · 7,067 input / 858 output tokens · 14.4 s · $0.000953
+Recorded 2026-11-02 · signed in as analyst (all regions) · Bahasa Indonesia · `gpt-6-luna` · 2 model calls · 7,067 input / 858 output tokens · 14.4 s · $0.001079
 
 **Answer (answered):** Jumlah pelanggan baru tercatat sebanyak 429 pada 2025-01-01, 388 pada 2025-02-01, dan 446 pada 2025-03-01. Rincian untuk bulan lainnya tersedia pada tabel.
 
@@ -112,7 +113,7 @@ Showing 10 of 12 rows.
 
 ## 7. How many orders were placed each month in 2025?
 
-Recorded 2026-11-02 · signed in as analyst (all regions) · English · `gpt-6-luna` · 2 model calls · 6,592 input / 629 output tokens · 8.3 s · $0.000791
+Recorded 2026-11-02 · signed in as analyst (all regions) · English · `gpt-6-luna` · 2 model calls · 6,592 input / 629 output tokens · 8.3 s · $0.000905
 
 **Answer (answered):** Orders by month, including cancelled orders: 2025-01-01 — 1,640; 2025-02-01 — 1,515; 2025-03-01 — 2,491; 2025-04-01 — 1,611; 2025-05-01 — 1,793; 2025-06-01 — 1,706; 2025-07-01 — 1,729; 2025-08-01 — 1,830; 2025-09-01 — 1,869; 2025-10-01 — 1,843; 2025-11-01 — 1,995; and 2025-12-01 — 2,148.
 
@@ -141,7 +142,7 @@ Showing 10 of 12 rows.
 
 ## 8. Metode pembayaran apa yang paling sering dipakai pada tahun 2026?
 
-Recorded 2026-11-02 · signed in as analyst (all regions) · Bahasa Indonesia · `gpt-6-luna` · 2 model calls · 6,457 input / 820 output tokens · 11.2 s · $0.000873
+Recorded 2026-11-02 · signed in as analyst (all regions) · Bahasa Indonesia · `gpt-6-luna` · 2 model calls · 6,457 input / 820 output tokens · 11.2 s · $0.000961
 
 **Answer (answered):** Metode pembayaran yang paling sering digunakan adalah ewallet, dengan 4.994 pesanan. Perhitungan mencakup periode yang tersedia dan pesanan yang dibatalkan.
 

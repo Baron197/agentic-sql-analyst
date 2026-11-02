@@ -53,7 +53,15 @@ def test_the_published_form_leaves_out_who_asked_and_internals():
     data = recorded.from_record(record()).model_dump()
     for private in ("user_id", "session_id", "context", "llm_calls", "answer_template"):
         assert private not in data
-    assert data["usage"]["cost_usd"] == 0.000512 and data["chart"]["type"] == "bar"
+    assert data["usage"]["cost_usd"] == 0.00047 and data["chart"]["type"] == "bar"
+
+
+def test_the_cost_is_priced_from_the_tokens_at_todays_prices():
+    # 3,000 uncached input, 300 output, 2,000 cache read at gpt-6-luna prices; the stored
+    # cost used older prices (D053).
+    run = recorded.from_record(record(usage={**record()["usage"], "cache_write_tokens": 4_000}))
+    expected = (3_000 * 0.10 + 300 * 0.50 + 2_000 * 0.01 + 4_000 * 0.125) / 1_000_000
+    assert run.usage.cost_usd == pytest.approx(expected)
 
 
 def test_keyless_runs_are_never_published():
@@ -104,7 +112,7 @@ def test_the_markdown_page_shows_answers_sql_rows_and_the_honesty_notes():
     page = recorded.render_markdown(runs)
     assert "Hand-picked, not a benchmark" in page and "fictional and synthetic" in page
     assert "| 9,285,162,700 |" in page and "Mobile \\| app" in page  # pipes escaped
-    assert "```sql\nSELECT channel_name" in page and "$0.000512" in page
+    assert "```sql\nSELECT channel_name" in page and "$0.000470" in page
     assert "**Refused by the rule-based guard, before any model call:** I can only read" in page
     assert "| refused | no model call | 3 ms | $0.000000 |" in page  # not the model's run
     assert "no model call (live, `gpt-6-luna` configured) · 3 ms" in page

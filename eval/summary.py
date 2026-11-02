@@ -13,7 +13,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from eval.report import cost_by_repeat, load
+from eval.report import cost_by_repeat, load, total_cost
+from sql_analyst.llm.pricing import PRICES_AS_OF
 
 ROOT = Path(__file__).resolve().parents[1]
 RESULTS = ROOT / "eval" / "results"
@@ -63,18 +64,18 @@ def run_summary(path: Path) -> dict[str, Any]:
         "repeats": m["repeats"],
         "metrics": {k: a[k] for k in METRICS},
         # Cost per question: the mean over repeats, and repeat 1 alone (a cold cache: the
-        # realistic cost of a new question). Computed from per-case costs, like the report.
+        # realistic cost of a new question). Priced from the token counts, like the report.
         "cost_per_question_usd": {
             "mean": round(statistics.mean(per_q), 8),
             "std": round(statistics.stdev(per_q), 8) if len(per_q) > 1 else 0.0,
         },
         "cost_new_question_usd": round(per_q[0], 8),
-        "total_cost_usd": round(sum(c["cost_usd"] for c in r["cases"]), 6),
+        "total_cost_usd": round(total_cost(r), 6),
     }
 
 
 def build(results: Path = RESULTS) -> dict[str, Any]:
-    return {"runs": [run_summary(results / name) for name in FILES]}
+    return {"prices_as_of": PRICES_AS_OF, "runs": [run_summary(results / name) for name in FILES]}
 
 
 def main() -> int:

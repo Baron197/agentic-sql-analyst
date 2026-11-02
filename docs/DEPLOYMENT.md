@@ -36,7 +36,7 @@ Prices checked on 2026-11-02 for Asia Pacific (Singapore) `ap-southeast-1`, Linu
 | **Infrastructure** | | **≈ $21** |
 | OpenAI `gpt-6-luna` | capped at `DAILY_BUDGET_USD` = $1.00 a day | **$0 to $31** |
 
-- **The model cost is capped, and the expected cost is far lower.** On the Phase 7 test split the agent cost $0.000476 per question on average, and $0.000659 per new question with a cold cache ([EVAL_RESULTS.md](EVAL_RESULTS.md)). The $1 daily cap allows about 1,500 new questions a day.
+- **The model cost is capped, and the expected cost is far lower.** On the Phase 7 test split the agent cost $0.000507 per question on average, and $0.000740 per new question with a cold cache ([EVAL_RESULTS.md](EVAL_RESULTS.md); OpenAI prices as of 2026-11-02, D053). The $1 daily cap allows about 1,350 new questions a day.
 - **Data transfer** for a demo page and JSON answers stays within the free monthly allowance.
 - **AWS Free plan.** On a new account's Free plan, the infrastructure is paid from the sign-up credits ($100, plus up to $100 more from AWS's onboarding activities), which last about 5 to 9 months at this rate. The Free plan itself ends after 6 months: the account is then suspended unless it is upgraded to a paid plan, and the demo goes offline.
 - Sources: [t4g.small prices by region](https://aws-pricing.com/t4g.small.html) (updated 2026-10-31), [ap-southeast-1 prices incl. EBS gp3](https://aws-pricing.com/ap-southeast-1.html), [AWS public IPv4 charge](https://aws.amazon.com/blogs/aws/new-aws-public-ipv4-address-charge-public-ip-insights). Check the [AWS Pricing Calculator](https://calculator.aws/) before relying on them.

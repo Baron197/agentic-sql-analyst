@@ -80,7 +80,7 @@ export const api = {
   runs: (limit = 50) => call<{ runs: RunSummary[] }>(`/api/runs?limit=${limit}`),
   run: (runId: string) => call<RunRecord>(`/api/runs/${encodeURIComponent(runId)}`),
   recordedRuns: () => call<{ runs: RecordedRun[] }>("/api/recorded-runs"),
-  evalSummary: () => call<{ runs: EvalRun[] }>("/api/eval-summary"),
+  evalSummary: () => call<{ prices_as_of?: string; runs: EvalRun[] }>("/api/eval-summary"),
 };
 
 export interface StreamHandlers {

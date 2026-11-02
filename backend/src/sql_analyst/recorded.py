@@ -7,11 +7,14 @@ and docs/RECORDED_RUNS.md is generated from the same file.
     python -m sql_analyst.recorded dump [--since 2026-11-02] > runs.json  # live runs, as stored
     python -m sql_analyst.recorded add runs.json [--ids ID,ID]  # into the data file + the docs
     python -m sql_analyst.recorded docs                         # regenerate RECORDED_RUNS.md
+    python -m sql_analyst.recorded reprice                      # costs at today's prices
 
 `dump` reads the database with the owner login, so run it where the database is. For the
 production stack: `infra/compose.sh run --rm -T seed python -m sql_analyst.recorded dump`.
 Keyless runs are never published: they replay a script, not a model. The published form
 leaves out the user and session ids, the retrieved context, and the per-call details.
+Each run's cost is priced from its token counts with llm/pricing.py, so a price correction
+reaches the published runs with `reprice` (D053).
 """
 
 import argparse
@@ -28,6 +31,7 @@ from sql_analyst.agent.schemas import ChartSpec
 from sql_analyst.agent.state import Refusal
 from sql_analyst.config import get_settings
 from sql_analyst.dictionary.loader import REPO_ROOT
+from sql_analyst.llm.pricing import PRICES_AS_OF, cost_usd
 
 DATA_PATH = REPO_ROOT / "data" / "recorded_runs.json"
 DOCS_PATH = REPO_ROOT / "docs" / "RECORDED_RUNS.md"
@@ -86,11 +90,20 @@ class RecordedRuns(BaseModel):
     runs: list[RecordedRun] = []
 
 
+def priced(run: RecordedRun) -> RecordedRun:
+    """The run with its cost recomputed from its tokens at today's prices."""
+    u = run.usage
+    cost = cost_usd(
+        run.model, u.input_tokens, u.output_tokens, u.cache_read_tokens, u.cache_write_tokens
+    )
+    return run.model_copy(update={"usage": u.model_copy(update={"cost_usd": cost})})
+
+
 def from_record(record: dict[str, Any]) -> RecordedRun:
     run = RecordedRun.model_validate(record)
     if run.usage.keyless:
         raise ValueError(f"run {run.run_id} is keyless: only live model runs are published")
-    return run
+    return priced(run)
 
 
 def load(path: Path | None = None) -> RecordedRuns:
@@ -173,6 +186,8 @@ def render_markdown(recorded: RecordedRuns) -> str:
         "behaves, refusals included. Measured accuracy is in [EVAL_RESULTS.md](EVAL_RESULTS.md).",
         "- **Every number in an answer was filled in by code** from the result rows; the model "
         "writes a template with slots, not the figures.",
+        f"- Costs are priced from each run's token counts ({PRICES_AS_OF} prices, "
+        "`llm/pricing.py`).",
         "- The same runs are on the web app's public *Recorded runs* page.",
         "",
     ]
@@ -239,6 +254,7 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("file", type=Path)
     a.add_argument("--ids", help="comma-separated run ids (default: every run in the file)")
     sub.add_parser("docs", help="regenerate docs/RECORDED_RUNS.md from the data file")
+    sub.add_parser("reprice", help="recompute every run's cost at today's prices, then the docs")
     args = p.parse_args(argv)
 
     if args.command == "dump":
@@ -253,6 +269,10 @@ def main(argv: list[str] | None = None) -> int:
         added = add(recorded, records, ids)
         save(recorded)
         print(f"added {len(added)} run(s); {len(recorded.runs)} recorded in {DATA_PATH.name}")
+    if args.command == "reprice":
+        recorded.runs = [priced(r) for r in recorded.runs]
+        save(recorded)
+        print(f"repriced {len(recorded.runs)} run(s) ({PRICES_AS_OF})")
     write_docs(recorded)
     print(f"wrote {DOCS_PATH.relative_to(REPO_ROOT)}")
     return 0

@@ -3,6 +3,8 @@
     uv run python -m eval.report eval/results/<a>.json eval/results/<b>.json ...
 
 Every row links to the file it came from, so no number in the write-up is typed by hand.
+Costs are priced from each file's token counts with today's table in llm/pricing.py, not
+read from the files' own cost fields, which used the prices known on the run date (D053).
 """
 
 import json
@@ -11,6 +13,8 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
+
+from sql_analyst.llm.pricing import cost_usd
 
 DOCS_TO_RESULTS = "../eval/results/"
 
@@ -68,12 +72,35 @@ def _missing() -> dict[str, None]:
     return {"mean": None, "std": None}  # older files lack newer metrics
 
 
+def case_cost(case: dict[str, Any], model: str) -> float:
+    """A case's cost at today's prices, from its token counts (call by call when the file has
+    them, so per-call price tiers still apply)."""
+    calls = case.get("calls")
+    if isinstance(calls, list) and calls:
+        return sum(
+            cost_usd(model, k["input"], k["output"], k["cache_read"], k["cache_write"])
+            for k in calls
+        )
+    return cost_usd(
+        model,
+        case["input_tokens"],
+        case["output_tokens"],
+        case["cache_read_tokens"],
+        case["cache_write_tokens"],
+    )
+
+
 def cost_by_repeat(r: dict[str, Any]) -> list[float]:
     """Cost per question in each repeat, from the per-case costs (the aggregate is rounded)."""
+    model = r["meta"]["model"]
     by: dict[str, list[float]] = defaultdict(list)
     for c in r["cases"]:
-        by[str(c["repeat"])].append(c["cost_usd"])
+        by[str(c["repeat"])].append(case_cost(c, model))
     return [sum(v) / len(v) for _, v in sorted(by.items())]
+
+
+def total_cost(r: dict[str, Any]) -> float:
+    return sum(case_cost(c, r["meta"]["model"]) for c in r["cases"])
 
 
 def quality_table(paths: list[Path]) -> str:
@@ -96,7 +123,7 @@ def cost_table(paths: list[Path]) -> str:
         std = statistics.stdev(per_q) if len(per_q) > 1 else 0.0
         cost = cell({"mean": statistics.mean(per_q), "std": std}, "cost_per_question_usd", n)
         cells = [cell(a.get(k, _missing()), k, n) for _, k in SPEED]
-        total = sum(c["cost_usd"] for c in r["cases"])
+        total = total_cost(r)
         rows.append(
             f"| {_name(r)} | " + " | ".join(cells) + f" | {cost} | {total:.4f} | {_link(p)} |"
         )
@@ -127,11 +154,13 @@ def step_table(paths: list[Path]) -> str:
         steps: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
         for rep in r["per_repeat"]:
             for step, u in (rep.get("usage_by_step") or {}).items():
-                for k in (*keys, "cost_usd"):
+                for k in keys:
                     steps[step][k] += u[k]
         for step, u in sorted(steps.items()):
             nums = " | ".join(f"{int(u[k]):,}" for k in keys)
-            rows.append(f"| {_name(r)} | {step} | {nums} | {u['cost_usd']:.4f} | {_link(p)} |")
+            tokens = [int(u[k]) for k in ("input", "output", "cache_read", "cache_write")]
+            cost = cost_usd(r["meta"]["model"], *tokens)
+            rows.append(f"| {_name(r)} | {step} | {nums} | {cost:.4f} | {_link(p)} |")
     head = ["System", "Model", "Questions x repeats", "Step", "Calls", "Uncached input"]
     head += ["Cache read", "Cache write", "Output", "Cost $", "File"]
     return _table(head, rows)

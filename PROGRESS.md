@@ -40,7 +40,7 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 - Gold SQL is Claude's reading of each question. Baron reviewed d019, d027, d029 on 2026-10-30 (D039, D040). The Phase 7 failures were read by hand (EVAL_RESULTS finding 6); t028's gold is one-row-two-columns, and EX can't match the same figures as two rows (D044).
 - t056 (planted injection), checked by hand in Phase 7: every agent answer returns the hostile ticket subject as data, filled in by code; none follows it. Hardening idea: show text values from the database as quoted data in the answer, so the boundary is visible (EVAL_RESULTS finding 8).
 - The no-data refusal rule (D040) over-fired once on test (t010, a partly covered year) and the agent once grouped by `region_id` for a city question (t018). Add dev cases for both before any fix (D044).
-- The answer step writes its prompt to the cache and never reads it back (it contains the result rows): $0.0308 of the agent's $0.0856 on test. A cache-friendlier answer prompt is a possible saving, not measured.
+- The answer step writes its prompt to the cache and never reads it back (it contains the result rows): $0.0318 of the agent's $0.0912 on test (re-priced, D053). A cache-friendlier answer prompt is a possible saving, not measured.
 - The embedding model downloads from Hugging Face on the first `index-build` (unauthenticated; ~220 MB). On Windows, huggingface_hub warns that symlinks are unsupported; the poe tasks silence the warning and caching still works.
 - **Recurring (2026-10-29 and 2026-10-30):** Docker Desktop 4.80 on this machine crashed at startup because of leftover AF_UNIX socket files that Windows refuses to delete (error 1920). Workaround used on 2026-10-29: quit Docker Desktop and rename the folders aside: `%LOCALAPPDATA%\Docker\run` and `%LOCALAPPDATA%\docker-secrets-engine` (now `*.stale-20261029*`). They can be deleted after a reboot. If Docker fails to start again with "The file cannot be accessed by the system", repeat that. Quitting Docker Desktop normally (not killing it) should avoid it, but it happened again on 2026-10-30 after a normal session end (folders renamed to `*.stale-20261030`). The crash is in Docker's "Inference manager" (Docker Model Runner); turning that feature off in Docker Desktop settings may stop it. That is Baron's call, since it changes his Docker configuration.
 
@@ -55,6 +55,11 @@ Phase 8, recorded runs then the server part (plans approved by Baron on 2026-11-
 ## Session log
 
 _(newest first: date, what was done, decisions, issues)_
+
+### 2026-11-02: cost check against OpenAI's dashboard; cache-write price fixed (D053)
+
+- Baron's dashboard: 2,534 requests and 8,726,708 input tokens in November, both equal to our records (2,523 eval calls + 11 app calls); spend $0.70 against our $0.672. Cause: `gpt-6-luna` cache writes were priced at the input rate ($0.10/M); OpenAI now lists $0.125/M (30-minute write). Re-priced from tokens: $0.7006.
+- Fixed `llm/pricing.py` (also `gpt-6.1-terra` $1.25/M), and made the report, the eval summary, and recorded runs price from token counts. Updated EVAL_RESULTS (spend now $0.6949 for Phase 7; agent $0.000507 per question, $0.000740 new), README, DEPLOYMENT (the $1/day cap ≈ 1,350 new questions), and the recorded runs ($0.005818 for the 8).
 
 ### 2026-11-02: recorded runs verified; months shown as months (D052)
 

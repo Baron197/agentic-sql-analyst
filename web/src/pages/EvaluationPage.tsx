@@ -168,10 +168,14 @@ function Findings({ runs }: { runs: EvalRun[] }) {
 export function EvaluationPage() {
   const [runs, setRuns] = useState<EvalRun[] | null>(null);
   const [error, setError] = useState(false);
+  const [pricesAsOf, setPricesAsOf] = useState<string | null>(null);
   useEffect(() => {
     api
       .evalSummary()
-      .then((r) => setRuns(r.runs))
+      .then((r) => {
+        setRuns(r.runs);
+        setPricesAsOf(r.prices_as_of ?? null);
+      })
       .catch(() => setError(true));
   }, []);
 
@@ -292,6 +296,8 @@ export function EvaluationPage() {
             <p className="text-sm text-ink-mute">
               A new question meets a cold prompt cache (the first of the {first?.repeats} repeats);
               the average includes the cheaper repeats, which reuse the cache.
+              {pricesAsOf &&
+                ` Costs are priced from each run's token counts with the list prices (${pricesAsOf}).`}
             </p>
           </section>
 

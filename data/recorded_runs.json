@@ -95,7 +95,7 @@
     "output_tokens": 902,
     "cache_read_tokens": 0,
     "cache_write_tokens": 7333,
-    "cost_usd": 0.0011849,
+    "cost_usd": 0.00136822,
     "keyless": false
    },
    "elapsed_ms": 14973.5
@@ -252,7 +252,7 @@
     "output_tokens": 200,
     "cache_read_tokens": 0,
     "cache_write_tokens": 5910,
-    "cost_usd": 0.0006913,
+    "cost_usd": 0.00083905,
     "keyless": false
    },
    "elapsed_ms": 6651.4
@@ -338,7 +338,7 @@
     "output_tokens": 294,
     "cache_read_tokens": 2032,
     "cache_write_tokens": 3332,
-    "cost_usd": 0.00058222,
+    "cost_usd": 0.00066552,
     "keyless": false
    },
    "elapsed_ms": 5466.8
@@ -468,7 +468,7 @@
     "output_tokens": 858,
     "cache_read_tokens": 2032,
     "cache_write_tokens": 5029,
-    "cost_usd": 0.00095282,
+    "cost_usd": 0.00107854,
     "keyless": false
    },
    "elapsed_ms": 14362.1
@@ -600,7 +600,7 @@
     "output_tokens": 629,
     "cache_read_tokens": 2032,
     "cache_write_tokens": 4554,
-    "cost_usd": 0.00079082,
+    "cost_usd": 0.00090467,
     "keyless": false
    },
    "elapsed_ms": 8270.7
@@ -689,7 +689,7 @@
     "output_tokens": 820,
     "cache_read_tokens": 2032,
     "cache_write_tokens": 3520,
-    "cost_usd": 0.00087282,
+    "cost_usd": 0.00096082,
     "keyless": false
    },
    "elapsed_ms": 11176.6

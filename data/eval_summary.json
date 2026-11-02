@@ -1,4 +1,5 @@
 {
+ "prices_as_of": "anthropic 2026-10-06, openai 2026-11-02",
  "runs": [
   {
    "file": "2026-11-01_agent_live_test_gpt-6-luna_n60_r3.json",
@@ -69,11 +70,11 @@
     }
    },
    "cost_per_question_usd": {
-    "mean": 0.00047568,
-    "std": 0.00015913
+    "mean": 0.00050656,
+    "std": 0.00020239
    },
-   "cost_new_question_usd": 0.00065938,
-   "total_cost_usd": 0.085622
+   "cost_new_question_usd": 0.00074021,
+   "total_cost_usd": 0.091181
   },
   {
    "file": "2026-11-01_baseline_live_test_gpt-6-luna_n60_r3.json",
@@ -144,11 +145,11 @@
     }
    },
    "cost_per_question_usd": {
-    "mean": 0.00029054,
-    "std": 6.44e-06
+    "mean": 0.00029198,
+    "std": 8.9e-06
    },
-   "cost_new_question_usd": 0.00029785,
-   "total_cost_usd": 0.052297
+   "cost_new_question_usd": 0.00030217,
+   "total_cost_usd": 0.052556
   },
   {
    "file": "2026-11-01_agent-no-retrieval_live_test_gpt-6-luna_n60_r3.json",
@@ -219,11 +220,11 @@
     }
    },
    "cost_per_question_usd": {
-    "mean": 0.00045578,
-    "std": 1.228e-05
+    "mean": 0.00046378,
+    "std": 1.467e-05
    },
-   "cost_new_question_usd": 0.0004694,
-   "total_cost_usd": 0.08204
+   "cost_new_question_usd": 0.00048029,
+   "total_cost_usd": 0.083481
   },
   {
    "file": "2026-11-01_agent-no-repair_live_test_gpt-6-luna_n60_r3.json",
@@ -294,11 +295,11 @@
     }
    },
    "cost_per_question_usd": {
-    "mean": 0.00046641,
-    "std": 0.00015369
+    "mean": 0.00049645,
+    "std": 0.00019673
    },
-   "cost_new_question_usd": 0.00064387,
-   "total_cost_usd": 0.083954
+   "cost_new_question_usd": 0.00072361,
+   "total_cost_usd": 0.089361
   },
   {
    "file": "2026-11-01_agent-no-few-shot_live_test_gpt-6-luna_n60_r3.json",
@@ -369,11 +370,11 @@
     }
    },
    "cost_per_question_usd": {
-    "mean": 0.00047647,
-    "std": 0.00014062
+    "mean": 0.00050422,
+    "std": 0.00017799
    },
-   "cost_new_question_usd": 0.00063862,
-   "total_cost_usd": 0.085764
+   "cost_new_question_usd": 0.00070956,
+   "total_cost_usd": 0.09076
   },
   {
    "file": "2026-11-01_agent-critic_live_test_gpt-6-luna_n60_r3.json",
@@ -444,11 +445,11 @@
     }
    },
    "cost_per_question_usd": {
-    "mean": 0.00064689,
-    "std": 0.00015791
+    "mean": 0.00068745,
+    "std": 0.00020189
    },
-   "cost_new_question_usd": 0.00082885,
-   "total_cost_usd": 0.11644
+   "cost_new_question_usd": 0.00092019,
+   "total_cost_usd": 0.123741
   },
   {
    "file": "2026-11-02_agent_live_test_gpt-4o-mini_n60_r3.json",

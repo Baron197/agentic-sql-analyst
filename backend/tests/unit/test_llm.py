@@ -24,6 +24,8 @@ def test_cost_uses_per_million_prices_including_cache():
         0.0019
     )
     assert cost_usd("claude-sonnet-5-5", 15_000, 2_000) == pytest.approx(0.05)
+    # gpt-6-luna cache writes: OpenAI's listed 30-minute write price, not the input rate (D053).
+    assert cost_usd("gpt-6-luna", 0, 0, cache_write_tokens=1_000_000) == pytest.approx(0.125)
 
 
 def test_haiku_long_prompts_use_the_higher_rate_card():

@@ -341,7 +341,7 @@ Short entries, newest last: context, decision, why, alternatives considered.
   - EX relabeled: `gpt-6-luna` 0.933 ± 0.023, `gpt-4o-mini` 0.733 ± 0.046;
   - assumption stated on ambiguous questions: 0.933 vs 0.133;
   - false refusals: 0.013 vs 0.060;
-  - cost per question: $0.000476 vs $0.000757;
+  - cost per question: $0.000476 vs $0.000757 (re-priced in D053: $0.000507 vs $0.000757);
   - p50 latency: 7.3 s vs 3.3 s.
 - **Recommendation:** `LLM_PROVIDER=openai`, `LLM_MODEL=gpt-6-luna` for live mode and the Phase 8 demo. It is more accurate and cheaper; the only cost is about 4 s more median latency, which the streamed step timeline makes visible rather than idle.
 - **Status:** per BUILD_GUIDE §8.4 the choice is Baron's; he confirmed it on 2026-11-02. The `LLM_MODEL` default in `.env.example` and `config.py` changed from `claude-haiku-5-5` to `gpt-6-luna`. `LLM_PROVIDER` stays `fake`, so tests, CI, and the local demo stay keyless; live mode needs `LLM_PROVIDER=openai` and `LIVE_MODE_ENABLED=true`.
@@ -426,3 +426,14 @@ Short entries, newest last: context, decision, why, alternatives considered.
 - **Decision:** the first day of a month (a date, or midnight on it) in a column whose name contains `month` or `bulan` is shown as the month: "March 2025" / "Maret 2025" in answers (`agent/render.py`), "Mar 2025" in the web table and chart axis. Other dates, and month columns holding numbers (1–12), are unchanged. The CSV keeps the raw values. Recorded runs keep their answer text as it was produced; their tables and charts pick up the new labels because the browser formats them.
 - **Why:** the column name says the value is a month, and the first day is how SQL represents one; a reader wants the month.
 - **Alternatives:** use every first-of-month date regardless of the column name (wrong for a column like `first_order_date`); ask the model to write month names (it never types values, by design); re-render the recorded answers with the new code (they would no longer be what the app said).
+
+## D053: gpt-6-luna cache writes cost $0.125 per 1M tokens; published costs re-priced (2026-11-02, Phase 8)
+
+- **Context:** Baron compared the app with OpenAI's billing dashboard. Requests (2,534) and input tokens (8,726,708) matched our records exactly, but November spend was $0.70 against our $0.672. OpenAI's pricing page listed no cache-write price on 2026-10-30, so `llm/pricing.py` charged cache writes at the input rate ($0.10 per 1M). It now lists a 30-minute write price for `gpt-6-luna` ($0.125) and `gpt-6.1-terra` ($1.25). At that price our records come to $0.7006, matching the dashboard.
+- **Decision:**
+  - the price table uses the listed 30-minute write prices (prices as of 2026-11-02); models with no listed write price keep the input rate;
+  - published costs are computed from token counts with the current table, not read from cost fields: `eval/report.py` (EVAL_RESULTS tables), `eval/summary.py` (Evaluation page), and `recorded.py` (`recorded reprice`, and on every `add`). The committed result files are unchanged; they keep the cost recorded at run time;
+  - EVAL_RESULTS, README, and DEPLOYMENT were updated. The agent on `gpt-6-luna` now costs $0.000507 per question ($0.000740 for a new question); it was $0.000476 / $0.000659. The baseline barely moves, `gpt-4o-mini` not at all, and no conclusion changes.
+- **Why:** costs are derived numbers. Token counts are the raw record, and they match the bill, so re-pricing them is exact and keeps every published cost consistent with the bill. Rewriting the result files would lose what was recorded at the time.
+- **Not changed:** runs already in a database keep their stored cost (8 local runs, $0.0058 at the new prices against $0.0051 stored); new runs are priced correctly. The daily budget counts stored costs, so today's local spend reads about $0.0007 low.
+- **Alternatives:** fix the price for future runs only and add a note (published costs would stay about 6% low for the agent); edit the cost fields in the result files (rewrites the record).

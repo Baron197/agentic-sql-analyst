@@ -8,8 +8,8 @@ Every number in the tables is generated from a committed result file by `eval/re
 
 - **Runs:** the test split, 60 questions × 3 repeats per system. The agent and baseline ran on 2026-11-01 with `gpt-6-luna`. The ablations and the critic also ran on 2026-11-01 with `gpt-6-luna`. The agent on `gpt-4o-mini` ran on 2026-11-02.
 - **Code:** commit `00d528b` for every run. The agent and prompts were last changed in `e442aaa`; `00d528b` only added the report tool.
-- **Prices:** OpenAI standard tier as of 2026-10-30 (D023). Cache writes are billed at the normal input rate.
-- **Spend:** $0.6424 for the seven test runs, plus $0.0244 for the dev check before them. Total $0.6669 of an approved $2 cap.
+- **Prices:** OpenAI standard tier, as listed on 2026-11-02. `gpt-6-luna` cache writes cost $0.125 per million tokens (the 30-minute write price), 1.25× the input rate. Costs are computed from each file's token counts with these prices. The files' own cost fields used $0.10 per million for cache writes and are about 6% low for the agent (D053).
+- **Spend:** $0.6674 for the seven test runs, plus $0.0275 for the dev check before them. Total $0.6949 of an approved $2 cap. This agrees with OpenAI's billing dashboard for November ($0.70 with the app's own runs on 2026-11-02).
 - **Test set use:** test questions were never used for prompts, few-shot examples, or tuning. They were scored once per run.
 - **Scores** (see `eval/metrics.py`):
   - **EX strict:** the result matches the gold rows and columns exactly (values compared, column names ignored).
@@ -34,12 +34,12 @@ Every number in the tables is generated from a committed result file by `eval/re
 
 | System | Model | Questions x repeats | p50 s | p95 s | Cache hit | $ / question | Total $ | File |
 |---|---|---|---|---|---|---|---|---|
-| agent | gpt-6-luna | 60 x 3 | 7.3 ± 0.8 | 14.4 ± 0.8 | 0.683 ± 0.298 | 0.000476 ± 0.000159 | 0.0856 | [2026-11-01_agent_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent_live_test_gpt-6-luna_n60_r3.json) |
-| baseline | gpt-6-luna | 60 x 3 | 5.3 ± 0.0 | 9.2 ± 0.3 | 0.975 ± 0.012 | 0.000291 ± 0.000006 | 0.0523 | [2026-11-01_baseline_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_baseline_live_test_gpt-6-luna_n60_r3.json) |
-| agent-no-retrieval | gpt-6-luna | 60 x 3 | 7.7 ± 0.2 | 15.2 ± 1.3 | 0.901 ± 0.010 | 0.000456 ± 0.000012 | 0.0820 | [2026-11-01_agent-no-retrieval_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-no-retrieval_live_test_gpt-6-luna_n60_r3.json) |
-| agent-no-repair | gpt-6-luna | 60 x 3 | 7.5 ± 0.7 | 13.0 ± 1.2 | 0.684 ± 0.303 | 0.000466 ± 0.000154 | 0.0840 | [2026-11-01_agent-no-repair_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-no-repair_live_test_gpt-6-luna_n60_r3.json) |
-| agent-no-few-shot | gpt-6-luna | 60 x 3 | 7.7 ± 0.2 | 13.9 ± 1.5 | 0.684 ± 0.278 | 0.000476 ± 0.000141 | 0.0858 | [2026-11-01_agent-no-few-shot_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-no-few-shot_live_test_gpt-6-luna_n60_r3.json) |
-| agent-critic | gpt-6-luna | 60 x 3 | 9.3 ± 0.8 | 22.4 ± 2.3 | 0.630 ± 0.256 | 0.000647 ± 0.000158 | 0.1164 | [2026-11-01_agent-critic_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-critic_live_test_gpt-6-luna_n60_r3.json) |
+| agent | gpt-6-luna | 60 x 3 | 7.3 ± 0.8 | 14.4 ± 0.8 | 0.683 ± 0.298 | 0.000507 ± 0.000202 | 0.0912 | [2026-11-01_agent_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent_live_test_gpt-6-luna_n60_r3.json) |
+| baseline | gpt-6-luna | 60 x 3 | 5.3 ± 0.0 | 9.2 ± 0.3 | 0.975 ± 0.012 | 0.000292 ± 0.000009 | 0.0526 | [2026-11-01_baseline_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_baseline_live_test_gpt-6-luna_n60_r3.json) |
+| agent-no-retrieval | gpt-6-luna | 60 x 3 | 7.7 ± 0.2 | 15.2 ± 1.3 | 0.901 ± 0.010 | 0.000464 ± 0.000015 | 0.0835 | [2026-11-01_agent-no-retrieval_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-no-retrieval_live_test_gpt-6-luna_n60_r3.json) |
+| agent-no-repair | gpt-6-luna | 60 x 3 | 7.5 ± 0.7 | 13.0 ± 1.2 | 0.684 ± 0.303 | 0.000496 ± 0.000197 | 0.0894 | [2026-11-01_agent-no-repair_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-no-repair_live_test_gpt-6-luna_n60_r3.json) |
+| agent-no-few-shot | gpt-6-luna | 60 x 3 | 7.7 ± 0.2 | 13.9 ± 1.5 | 0.684 ± 0.278 | 0.000504 ± 0.000178 | 0.0908 | [2026-11-01_agent-no-few-shot_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-no-few-shot_live_test_gpt-6-luna_n60_r3.json) |
+| agent-critic | gpt-6-luna | 60 x 3 | 9.3 ± 0.8 | 22.4 ± 2.3 | 0.630 ± 0.256 | 0.000687 ± 0.000202 | 0.1237 | [2026-11-01_agent-critic_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-critic_live_test_gpt-6-luna_n60_r3.json) |
 | agent | gpt-4o-mini | 60 x 3 | 3.3 ± 0.2 | 7.7 ± 1.9 | 0.743 ± 0.172 | 0.000757 ± 0.000100 | 0.1363 | [2026-11-02_agent_live_test_gpt-4o-mini_n60_r3](../eval/results/2026-11-02_agent_live_test_gpt-4o-mini_n60_r3.json) |
 
 ## Findings
@@ -65,7 +65,7 @@ None of the three ablations moved EX relabeled by more than the noise. All are w
 | no few-shot examples | 0.933 ± 0.011 | 0.000 |
 
 - **Repair** fired on 0.013 ± 0.011 of answerable questions with `gpt-6-luna`: the model rarely writes SQL that fails. It fired on 0.133 ± 0.031 with `gpt-4o-mini`, so it matters more with a weaker model.
-- **Without retrieval** the agent was slightly cheaper ($0.000456 vs $0.000476 per question): a static prompt caches better than a retrieved one (see finding 4).
+- **Without retrieval** the agent was slightly cheaper ($0.000464 vs $0.000507 per question): a static prompt caches better than a retrieved one (see finding 4).
 - **These are kept on anyway.** They cost little, and they are what a bigger schema would need. But on this schema they are **not measured to help**, and the docs don't claim they do.
 
 ### 3. The critic made the agent worse: a negative result
@@ -75,7 +75,7 @@ With the critic step on (`--critic`, D028):
 - false refusals rose from 0.013 to 0.067 ± 0.023 (it refused answerable questions t010, t018, t033, and t060);
 - the repair rate rose from 0.013 to 0.173 ± 0.023 (it sent good SQL back for rewriting);
 - p95 latency rose from 14.4 to 22.4 s;
-- cost rose by 36% ($0.000647 vs $0.000476 per question).
+- cost rose by 36% ($0.000687 vs $0.000507 per question).
 
 The critic stays off by default (D044).
 
@@ -83,19 +83,19 @@ The critic stays off by default (D044).
 
 | System | Model | Questions x repeats | Step | Calls | Uncached input | Cache read | Cache write | Output | Cost $ | File |
 |---|---|---|---|---|---|---|---|---|---|---|
-| agent | gpt-6-luna | 60 x 3 | generate_sql | 173 | 519 | 705,118 | 184,062 | 58,560 | 0.0548 | [2026-11-01_agent_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent_live_test_gpt-6-luna_n60_r3.json) |
-| agent | gpt-6-luna | 60 x 3 | write_answer | 153 | 106,461 | 0 | 38,293 | 32,715 | 0.0308 | [2026-11-01_agent_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent_live_test_gpt-6-luna_n60_r3.json) |
+| agent | gpt-6-luna | 60 x 3 | generate_sql | 173 | 519 | 705,118 | 184,062 | 58,560 | 0.0594 | [2026-11-01_agent_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent_live_test_gpt-6-luna_n60_r3.json) |
+| agent | gpt-6-luna | 60 x 3 | write_answer | 153 | 106,461 | 0 | 38,293 | 32,715 | 0.0318 | [2026-11-01_agent_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent_live_test_gpt-6-luna_n60_r3.json) |
 | baseline | gpt-6-luna | 60 x 3 | answer | 148 | 26,158 | 0 | 0 | 10,053 | 0.0076 | [2026-11-01_baseline_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_baseline_live_test_gpt-6-luna_n60_r3.json) |
-| baseline | gpt-6-luna | 60 x 3 | sql | 180 | 540 | 1,417,984 | 10,373 | 58,767 | 0.0447 | [2026-11-01_baseline_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_baseline_live_test_gpt-6-luna_n60_r3.json) |
-| agent-no-retrieval | gpt-6-luna | 60 x 3 | generate_sql | 173 | 519 | 1,449,844 | 11,824 | 70,292 | 0.0509 | [2026-11-01_agent-no-retrieval_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-no-retrieval_live_test_gpt-6-luna_n60_r3.json) |
-| agent-no-retrieval | gpt-6-luna | 60 x 3 | write_answer | 152 | 101,929 | 0 | 45,801 | 32,777 | 0.0312 | [2026-11-01_agent-no-retrieval_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-no-retrieval_live_test_gpt-6-luna_n60_r3.json) |
-| agent-no-repair | gpt-6-luna | 60 x 3 | generate_sql | 171 | 513 | 699,022 | 178,823 | 57,581 | 0.0537 | [2026-11-01_agent-no-repair_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-no-repair_live_test_gpt-6-luna_n60_r3.json) |
-| agent-no-repair | gpt-6-luna | 60 x 3 | write_answer | 151 | 105,654 | 0 | 37,445 | 31,860 | 0.0302 | [2026-11-01_agent-no-repair_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-no-repair_live_test_gpt-6-luna_n60_r3.json) |
-| agent-no-few-shot | gpt-6-luna | 60 x 3 | generate_sql | 173 | 519 | 659,028 | 158,830 | 64,086 | 0.0546 | [2026-11-01_agent-no-few-shot_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-no-few-shot_live_test_gpt-6-luna_n60_r3.json) |
-| agent-no-few-shot | gpt-6-luna | 60 x 3 | write_answer | 152 | 105,761 | 0 | 40,988 | 33,042 | 0.0312 | [2026-11-01_agent-no-few-shot_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-no-few-shot_live_test_gpt-6-luna_n60_r3.json) |
+| baseline | gpt-6-luna | 60 x 3 | sql | 180 | 540 | 1,417,984 | 10,373 | 58,767 | 0.0449 | [2026-11-01_baseline_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_baseline_live_test_gpt-6-luna_n60_r3.json) |
+| agent-no-retrieval | gpt-6-luna | 60 x 3 | generate_sql | 173 | 519 | 1,449,844 | 11,824 | 70,292 | 0.0512 | [2026-11-01_agent-no-retrieval_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-no-retrieval_live_test_gpt-6-luna_n60_r3.json) |
+| agent-no-retrieval | gpt-6-luna | 60 x 3 | write_answer | 152 | 101,929 | 0 | 45,801 | 32,777 | 0.0323 | [2026-11-01_agent-no-retrieval_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-no-retrieval_live_test_gpt-6-luna_n60_r3.json) |
+| agent-no-repair | gpt-6-luna | 60 x 3 | generate_sql | 171 | 513 | 699,022 | 178,823 | 57,581 | 0.0582 | [2026-11-01_agent-no-repair_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-no-repair_live_test_gpt-6-luna_n60_r3.json) |
+| agent-no-repair | gpt-6-luna | 60 x 3 | write_answer | 151 | 105,654 | 0 | 37,445 | 31,860 | 0.0312 | [2026-11-01_agent-no-repair_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-no-repair_live_test_gpt-6-luna_n60_r3.json) |
+| agent-no-few-shot | gpt-6-luna | 60 x 3 | generate_sql | 173 | 519 | 659,028 | 158,830 | 64,086 | 0.0585 | [2026-11-01_agent-no-few-shot_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-no-few-shot_live_test_gpt-6-luna_n60_r3.json) |
+| agent-no-few-shot | gpt-6-luna | 60 x 3 | write_answer | 152 | 105,761 | 0 | 40,988 | 33,042 | 0.0322 | [2026-11-01_agent-no-few-shot_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-no-few-shot_live_test_gpt-6-luna_n60_r3.json) |
 | agent-critic | gpt-6-luna | 60 x 3 | check_result | 144 | 54,373 | 0 | 0 | 26,159 | 0.0185 | [2026-11-01_agent-critic_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-critic_live_test_gpt-6-luna_n60_r3.json) |
-| agent-critic | gpt-6-luna | 60 x 3 | generate_sql | 197 | 591 | 757,474 | 260,245 | 72,658 | 0.0700 | [2026-11-01_agent-critic_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-critic_live_test_gpt-6-luna_n60_r3.json) |
-| agent-critic | gpt-6-luna | 60 x 3 | write_answer | 142 | 102,453 | 0 | 31,799 | 29,021 | 0.0279 | [2026-11-01_agent-critic_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-critic_live_test_gpt-6-luna_n60_r3.json) |
+| agent-critic | gpt-6-luna | 60 x 3 | generate_sql | 197 | 591 | 757,474 | 260,245 | 72,658 | 0.0765 | [2026-11-01_agent-critic_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-critic_live_test_gpt-6-luna_n60_r3.json) |
+| agent-critic | gpt-6-luna | 60 x 3 | write_answer | 142 | 102,453 | 0 | 31,799 | 29,021 | 0.0287 | [2026-11-01_agent-critic_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent-critic_live_test_gpt-6-luna_n60_r3.json) |
 | agent | gpt-4o-mini | 60 x 3 | generate_sql | 199 | 169,816 | 869,888 | 0 | 30,957 | 0.1093 | [2026-11-02_agent_live_test_gpt-4o-mini_n60_r3](../eval/results/2026-11-02_agent_live_test_gpt-4o-mini_n60_r3.json) |
 | agent | gpt-4o-mini | 60 x 3 | write_answer | 147 | 135,176 | 0 | 0 | 11,293 | 0.0271 | [2026-11-02_agent_live_test_gpt-4o-mini_n60_r3](../eval/results/2026-11-02_agent_live_test_gpt-4o-mini_n60_r3.json) |
 
@@ -107,26 +107,26 @@ The critic stays off by default (D044).
 
 | System | Model | Questions x repeats | Repeat | Cache hit | $ / question | File |
 |---|---|---|---|---|---|---|
-| agent | gpt-6-luna | 60 x 3 | 1 | 0.339 | 0.000659 | [2026-11-01_agent_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent_live_test_gpt-6-luna_n60_r3.json) |
-| agent | gpt-6-luna | 60 x 3 | 2 | 0.850 | 0.000387 | [2026-11-01_agent_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent_live_test_gpt-6-luna_n60_r3.json) |
-| agent | gpt-6-luna | 60 x 3 | 3 | 0.861 | 0.000380 | [2026-11-01_agent_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent_live_test_gpt-6-luna_n60_r3.json) |
-| baseline | gpt-6-luna | 60 x 3 | 1 | 0.960 | 0.000298 | [2026-11-01_baseline_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_baseline_live_test_gpt-6-luna_n60_r3.json) |
+| agent | gpt-6-luna | 60 x 3 | 1 | 0.339 | 0.000740 | [2026-11-01_agent_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent_live_test_gpt-6-luna_n60_r3.json) |
+| agent | gpt-6-luna | 60 x 3 | 2 | 0.850 | 0.000394 | [2026-11-01_agent_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent_live_test_gpt-6-luna_n60_r3.json) |
+| agent | gpt-6-luna | 60 x 3 | 3 | 0.861 | 0.000386 | [2026-11-01_agent_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent_live_test_gpt-6-luna_n60_r3.json) |
+| baseline | gpt-6-luna | 60 x 3 | 1 | 0.960 | 0.000302 | [2026-11-01_baseline_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_baseline_live_test_gpt-6-luna_n60_r3.json) |
 | baseline | gpt-6-luna | 60 x 3 | 2 | 0.982 | 0.000286 | [2026-11-01_baseline_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_baseline_live_test_gpt-6-luna_n60_r3.json) |
 | baseline | gpt-6-luna | 60 x 3 | 3 | 0.982 | 0.000288 | [2026-11-01_baseline_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_baseline_live_test_gpt-6-luna_n60_r3.json) |
 | agent | gpt-4o-mini | 60 x 3 | 1 | 0.545 | 0.000871 | [2026-11-02_agent_live_test_gpt-4o-mini_n60_r3](../eval/results/2026-11-02_agent_live_test_gpt-4o-mini_n60_r3.json) |
 | agent | gpt-4o-mini | 60 x 3 | 2 | 0.837 | 0.000721 | [2026-11-02_agent_live_test_gpt-4o-mini_n60_r3](../eval/results/2026-11-02_agent_live_test_gpt-4o-mini_n60_r3.json) |
 | agent | gpt-4o-mini | 60 x 3 | 3 | 0.847 | 0.000680 | [2026-11-02_agent_live_test_gpt-4o-mini_n60_r3](../eval/results/2026-11-02_agent_live_test_gpt-4o-mini_n60_r3.json) |
 
-- **Agent vs baseline.** On a cold cache the agent costs about 2.2× the baseline per question ($0.000659 vs $0.000298). Warm, it costs about 1.35× ($0.000387 vs $0.000286). Both are under a tenth of a US cent per question.
+- **Agent vs baseline.** On a cold cache the agent costs about 2.45× the baseline per question ($0.000740 vs $0.000302). Warm, it costs about 1.4× ($0.000394 vs $0.000286). Both are under a tenth of a US cent per question.
 - **`prompt_cache_key` made no measurable difference.** It was added in `e442aaa` to route calls with the same system prompt to the same cache. On the dev split (40 questions, 1 repeat each):
 
   | Dev run | Cache read | Cache write | Cost |
   |---|---|---|---|
-  | [2026-10-30, before the key](../eval/results/2026-10-30_agent_live_dev_gpt-6-luna_n40_r1.json) | 64,820 | 122,890 | $0.0241 |
-  | [2026-11-01, with the key](../eval/results/2026-11-01_agent_live_dev_gpt-6-luna_n40_r1.json) | 71,120 | 122,062 | $0.0244 |
+  | [2026-10-30, before the key](../eval/results/2026-10-30_agent_live_dev_gpt-6-luna_n40_r1.json) | 64,820 | 122,890 | $0.0272 |
+  | [2026-11-01, with the key](../eval/results/2026-11-01_agent_live_dev_gpt-6-luna_n40_r1.json) | 71,120 | 122,062 | $0.0275 |
 
   The cost is structural: the per-question retrieved context can't be cached before it has been seen once. The key stays because it is harmless and correct (D041).
-- **The answer step never reads from the cache.** It writes 38,293 tokens to the cache across the 3 repeats and reads none, because its prompt contains the result rows. Its cost is $0.0308 of the agent's $0.0856. A cache-friendlier answer prompt is a possible cost saving, not yet measured.
+- **The answer step never reads from the cache.** It writes 38,293 tokens to the cache across the 3 repeats and reads none, because its prompt contains the result rows. Its cost is $0.0318 of the agent's $0.0912. A cache-friendlier answer prompt is a possible cost saving, not yet measured.
 
 ### 5. Model comparison: `gpt-6-luna` over `gpt-4o-mini`
 
@@ -136,9 +136,9 @@ The critic stays off by default (D044).
 | Ambiguous questions with a stated assumption | 0.933 ± 0.116 | 0.133 ± 0.231 |
 | False refusals | 0.013 ± 0.011 | 0.060 ± 0.035 |
 | p50 / p95 latency | 7.3 / 14.4 s | 3.3 / 7.7 s |
-| Cost per question | $0.000476 | $0.000757 |
+| Cost per question | $0.000507 | $0.000757 |
 
-`gpt-4o-mini` is twice as fast, but it is 20 points less accurate. It is also 1.6× more expensive, because its cached input is only 50% cheaper ($0.075 vs $0.15 per million tokens) while `gpt-6-luna`'s is 90% cheaper ($0.01 vs $0.10). It rarely states its assumptions on ambiguous questions, and it refused the hostile-data lookup t056 in all 3 repeats (adversarial EX 0.00). Its biggest drops are on joins, metric definitions, and time questions (0.62–0.63 vs 0.88–1.00). The recommended model is `gpt-6-luna` (D043). Only these two OpenAI models were compared, to keep the paid runs under the approved budget (D042); the Anthropic adapter exists but was not run on the test split.
+`gpt-4o-mini` is twice as fast, but it is 20 points less accurate. It is also 1.5× more expensive, because its cached input is only 50% cheaper ($0.075 vs $0.15 per million tokens) while `gpt-6-luna`'s is 90% cheaper ($0.01 vs $0.10). It rarely states its assumptions on ambiguous questions, and it refused the hostile-data lookup t056 in all 3 repeats (adversarial EX 0.00). Its biggest drops are on joins, metric definitions, and time questions (0.62–0.63 vs 0.88–1.00). The recommended model is `gpt-6-luna` (D043). Only these two OpenAI models were compared, to keep the paid runs under the approved budget (D042); the Anthropic adapter exists but was not run on the test split.
 
 ### 6. Failures by category
 

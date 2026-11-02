@@ -40,8 +40,8 @@ Test split, 60 questions × 3 repeats, `gpt-6-luna`, run on 2026-11-01. Full tab
 
 | System | EX relabeled | Typed numbers per run | p50 | $ / question |
 |---|---|---|---|---|
-| Agent | 0.933 ± 0.023 | 0 | 7.3 s | 0.000476 |
-| Single-prompt baseline | 0.953 ± 0.031 | 48.3 ± 1.2 | 5.3 s | 0.000291 |
+| Agent | 0.933 ± 0.023 | 0 | 7.3 s | 0.000507 |
+| Single-prompt baseline | 0.953 ± 0.031 | 48.3 ± 1.2 | 5.3 s | 0.000292 |
 
 - **On this small schema the agent is not more accurate than the baseline:** the difference is within noise. What it adds is that every figure is filled in by code, so none needs checking by hand.
 - **Null results:** removing retrieval, repair, or few-shot examples didn't change accuracy measurably here.
