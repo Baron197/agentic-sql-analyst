@@ -21,6 +21,10 @@ process.env.DEMO_ANALYST_PASSWORD = demoPassword();
 // SIGTERM lets poe stop its child first. Windows ignores this option and works without it.
 const stopGracefully = { signal: "SIGTERM", timeout: 10_000 } as const;
 
+// PLAYWRIGHT_BASE_URL points the tests at a running stack instead (for example the production
+// stack, for screenshots of its recorded live runs); then no dev servers are started.
+const external = process.env.PLAYWRIGHT_BASE_URL;
+
 export default defineConfig({
   testDir: "e2e",
   timeout: 60_000,
@@ -28,27 +32,29 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: [["list"]],
   use: {
-    baseURL: "http://127.0.0.1:5173",
+    baseURL: external ?? "http://127.0.0.1:5173",
     trace: "off",
     screenshot: "only-on-failure",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   // Postgres must already be running with the data, index, and app schema (`uv run poe db-reset`).
-  webServer: [
-    {
-      command: "uv run poe api",
-      cwd: "..",
-      url: "http://127.0.0.1:8000/api/health",
-      reuseExistingServer: !process.env.CI,
-      gracefulShutdown: stopGracefully,
-      timeout: 120_000,
-    },
-    {
-      command: "npm run dev",
-      url: "http://127.0.0.1:5173",
-      reuseExistingServer: !process.env.CI,
-      gracefulShutdown: stopGracefully,
-      timeout: 60_000,
-    },
-  ],
+  webServer: external
+    ? undefined
+    : [
+        {
+          command: "uv run poe api",
+          cwd: "..",
+          url: "http://127.0.0.1:8000/api/health",
+          reuseExistingServer: !process.env.CI,
+          gracefulShutdown: stopGracefully,
+          timeout: 120_000,
+        },
+        {
+          command: "npm run dev",
+          url: "http://127.0.0.1:5173",
+          reuseExistingServer: !process.env.CI,
+          gracefulShutdown: stopGracefully,
+          timeout: 60_000,
+        },
+      ],
 });

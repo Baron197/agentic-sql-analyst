@@ -416,6 +416,6 @@ Short entries, newest last: context, decision, why, alternatives considered.
 ## D051: "Keyless" means the stand-in model, not "no model call" (2026-11-02, Phase 8)
 
 - **Context:** a run's `keyless` flag came from its model calls: true unless a paid call was made. A live run refused by the rule-based guard makes no call, so it was stored as keyless. History showed "Keyless (no model)" on a live stack, and `recorded` refused to publish these safety refusals.
-- **Decision:** finalize sets `keyless` from the agent's provider (`fake` only). History shows a live run with no model call as "Live · no model call", and Run details as "Live, no model call needed". `app-setup` fixes runs stored before this with an idempotent `UPDATE` (keyless only where the provider is `fake`).
+- **Decision:** finalize sets `keyless` from the agent's provider (`fake` only). History shows a live run with no model call as "Live · no model call", and Run details as "Live, no model call". `app-setup` fixes runs stored before this with an idempotent `UPDATE` (keyless only where the provider is `fake`).
 - **Why:** keyless runs are excluded from spend, publishing, and any quality claim because a script answered them. A rule-based refusal on a live stack is a real result of the live system.
 - **Alternatives:** keep the flag and add a separate "no call" label (two flags that mean almost the same thing); fix only the label in the web app (the stored flag would still block publishing).

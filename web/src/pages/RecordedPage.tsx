@@ -114,8 +114,8 @@ export function RecordedRunPage() {
           <p className="text-xs text-ink-mute">
             Recorded live run,{" "}
             {new Date(run.created_at).toLocaleDateString("en-GB", { dateStyle: "medium" })}, asked
-            as the {ROLE_LABEL[run.role] ?? run.role}. Replayed from a file: no model call. The
-            stored run keeps the first 50 rows.
+            as the {ROLE_LABEL[run.role] ?? run.role}. Replayed from a file: no model call.
+            {run.columns.length > 0 && " The stored run keeps the first 50 rows."}
           </p>
           <RunResult run={fromRecord(run)} />
         </>

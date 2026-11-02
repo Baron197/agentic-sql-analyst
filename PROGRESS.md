@@ -56,6 +56,12 @@ Phase 8, recorded runs then the server part (plans approved by Baron on 2026-11-
 
 _(newest first: date, what was done, decisions, issues)_
 
+### 2026-11-02: README refresh with live-run screenshots
+
+- The README's main screenshot is now a real `gpt-6-luna` run (the Q1 net revenue answer) on the public Recorded runs page, with links to the phone view and a guard refusal. The screenshots come from `e2e/screenshots.spec.ts` (`-g recorded`), run against the live stack with `PLAYWRIGHT_BASE_URL=http://127.0.0.1:8088`: replays, so no model call. The old keyless `ask-*`/`login-*` screenshots stay in `docs/screenshots/` but are no longer in the README.
+- New README sections: the web app's pages, a Phase 8 status split into done and next, and how to switch to live mode (paid). Run details now says "Live, no model call", and the "first 50 rows" note shows only for runs with rows.
+- Playwright screenshots ran in a Linux Node container (the local `web/node_modules` is still broken).
+
 ### 2026-11-02: first recorded live runs published
 
 - Baron asked 8 questions on the local live stack ($0.005075 in total for the 6 live runs) and chose to publish every live one: 6 runs (4 English, 2 Indonesian; 5 answers and 1 refusal of a date outside the data). Dumped inside the stack, added with `poe recorded-add`, reviewed, and committed as `data/recorded_runs.json` and `docs/RECORDED_RUNS.md`; the README links to them.

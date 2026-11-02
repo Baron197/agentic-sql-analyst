@@ -107,7 +107,9 @@ export function RunPage() {
       {run && (
         <>
           <h1 className="text-xl font-semibold">{run.question}</h1>
-          <p className="text-xs text-ink-mute">The stored run keeps the first 50 rows.</p>
+          {run.rows && (
+            <p className="text-xs text-ink-mute">The stored run keeps the first 50 rows.</p>
+          )}
           <RunResult run={run} />
         </>
       )}
