@@ -419,3 +419,10 @@ Short entries, newest last: context, decision, why, alternatives considered.
 - **Decision:** finalize sets `keyless` from the agent's provider (`fake` only). History shows a live run with no model call as "Live · no model call", and Run details as "Live, no model call". `app-setup` fixes runs stored before this with an idempotent `UPDATE` (keyless only where the provider is `fake`).
 - **Why:** keyless runs are excluded from spend, publishing, and any quality claim because a script answered them. A rule-based refusal on a live stack is a real result of the live system.
 - **Alternatives:** keep the flag and add a separate "no call" label (two flags that mean almost the same thing); fix only the label in the web app (the stored flag would still block publishing).
+
+## D052: Month-start dates are shown as months (2026-11-02, Phase 8)
+
+- **Context:** monthly questions return `date_trunc('month', …)` values, and answers showed them as dates: "2025-01-01 — 1,640" instead of "January 2025: 1,640".
+- **Decision:** the first day of a month (a date, or midnight on it) in a column whose name contains `month` or `bulan` is shown as the month: "March 2025" / "Maret 2025" in answers (`agent/render.py`), "Mar 2025" in the web table and chart axis. Other dates, and month columns holding numbers (1–12), are unchanged. The CSV keeps the raw values. Recorded runs keep their answer text as it was produced; their tables and charts pick up the new labels because the browser formats them.
+- **Why:** the column name says the value is a month, and the first day is how SQL represents one; a reader wants the month.
+- **Alternatives:** use every first-of-month date regardless of the column name (wrong for a column like `first_order_date`); ask the model to write month names (it never types values, by design); re-render the recorded answers with the new code (they would no longer be what the app said).

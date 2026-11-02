@@ -26,7 +26,7 @@ export function AutoChart({ chart, result }: { chart: Chart | null; result: Rows
   const xIndex = chart.x ? result.columns.indexOf(chart.x) : -1;
   if (xIndex === -1) return null;
   const data = result.rows.map((row) => ({
-    x: String(row[xIndex] ?? "NULL"),
+    x: formatCell(row[xIndex], chart.x ?? ""),
     y: typeof row[yIndex] === "number" ? (row[yIndex] as number) : null,
   }));
   return (

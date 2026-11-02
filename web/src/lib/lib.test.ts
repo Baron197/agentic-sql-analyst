@@ -34,6 +34,10 @@ describe("formatting", () => {
     expect(formatCell(2025, "year")).toBe("2025");
     expect(formatCell(1234, "store_id")).toBe("1234");
     expect(formatCell(null)).toBe("NULL");
+    expect(formatCell("2025-03-01", "month_start")).toBe("Mar 2025");
+    expect(formatCell("2025-05-01T00:00:00+07:00", "bulan")).toBe("May 2025");
+    expect(formatCell("2025-03-15", "month")).toBe("2025-03-15"); // not a month start
+    expect(formatCell("2025-03-01", "first_order_date")).toBe("2025-03-01"); // not a month column
   });
 
   it("humanizes column names and formats cost", () => {

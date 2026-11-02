@@ -48,7 +48,11 @@ def test_money_is_scaled_per_locale(value, en, id_):
         ("total_amount", 950_000, "IDR 950,000", "Rp 950.000"),
         ("avg_csat", Decimal("4.1234"), "4.12", "4,12"),
         ("city", "Jakarta", "Jakarta", "Jakarta"),
-        ("month", date(2025, 3, 1), "2025-03-01", "2025-03-01"),
+        ("month", date(2025, 3, 1), "March 2025", "Maret 2025"),
+        ("month_start", datetime(2025, 5, 1), "May 2025", "Mei 2025"),  # date_trunc on a timestamp
+        ("bulan", date(2025, 8, 1), "August 2025", "Agustus 2025"),
+        ("month", date(2025, 3, 15), "2025-03-15", "2025-03-15"),  # not a month start
+        ("first_order_date", date(2025, 3, 1), "2025-03-01", "2025-03-01"),  # not a month column
         ("ordered_at", datetime(2025, 3, 1, 14, 5), "2025-03-01 14:05", "2025-03-01 14:05"),
         ("is_online", True, "yes", "ya"),
         ("net_revenue_idr", None, "no data", "tidak ada data"),

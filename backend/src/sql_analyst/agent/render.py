@@ -6,12 +6,13 @@ Slots (the only way a figure reaches the answer):
 - `{{row_count}}`: the number of rows returned.
 
 Formatting follows the column name: rupiah as `IDR 1.23B` (en) / `Rp 1,23 miliar` (id),
-rates and shares as percentages, counts with thousands separators, and identifiers such
-as years or codes as they are.
+rates and shares as percentages, counts with thousands separators, identifiers such as
+years or codes as they are, and the first day of a month in a month column (`month_start`,
+`bulan`) as the month: `March 2025` (en) / `Maret 2025` (id).
 """
 
 import re
-from datetime import date, datetime
+from datetime import date, datetime, time
 from decimal import Decimal
 from typing import Any, Literal
 
@@ -30,6 +31,14 @@ _PLAIN = re.compile(
 _PERCENT = re.compile(r"rate|ratio|share|pct|percent|conversion|margin|persen")
 _COUNT = re.compile(r"count|qty|quantity|units|orders|customers|visitors|sessions|tickets|jumlah")
 _MONEY = re.compile(r"_idr$|^idr_|revenue|sales|amount|aov|price|spend|fee|cost|omzet|pendapatan")
+
+_MONTH_COLUMN = re.compile(r"month|bulan")
+_MONTHS = {
+    "en": ["January", "February", "March", "April", "May", "June", "July", "August",
+           "September", "October", "November", "December"],
+    "id": ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus",
+           "September", "Oktober", "November", "Desember"],
+}  # fmt: skip
 
 _SCALES = {
     "en": [(10**12, "T"), (10**9, "B"), (10**6, "M")],
@@ -94,11 +103,19 @@ def format_money(value: float | int | Decimal, lang: Lang) -> str:
     return prefix + format_number(v, lang, 0)
 
 
+def _is_month_start(value: date, column: str) -> bool:
+    """A month column's first day (a date, or midnight on it), as `date_trunc('month')` gives."""
+    midnight = not isinstance(value, datetime) or value.time() == time()
+    return value.day == 1 and midnight and bool(_MONTH_COLUMN.search(column.lower()))
+
+
 def format_value(value: Any, column: str, lang: Lang) -> str:
     if value is None:
         return _NO_DATA[lang]
     if isinstance(value, bool):
         return _BOOL[lang][0 if value else 1]
+    if isinstance(value, date) and _is_month_start(value, column):
+        return f"{_MONTHS[lang][value.month - 1]} {value.year}"
     if isinstance(value, datetime):
         return value.strftime("%Y-%m-%d %H:%M")
     if isinstance(value, date):

@@ -56,6 +56,11 @@ Phase 8, recorded runs then the server part (plans approved by Baron on 2026-11-
 
 _(newest first: date, what was done, decisions, issues)_
 
+### 2026-11-02: recorded runs verified; months shown as months (D052)
+
+- **Verified the 8 recorded runs** against independent SQL on the raw `core` tables (admin): all 5 answers match exactly (every stored row), and the 3 refusals are right (a write, personal data, a date after the data ends on 2026-09-30). Interpretation choices are stated in each answer's assumptions: calendar Q1, and counting cancelled orders (and every payment) in three answers; the payment-method ranking is the same either way.
+- **Months:** answers now say "January 2025" / "Januari 2025" for a month column's first day, and the web table and chart say "Jan 2025". The two monthly recorded runs keep their original answer text ("2025-01-01 — 1,640"); their tables and charts show the new labels.
+
 ### 2026-11-02: README refresh with live-run screenshots
 
 - The README's main screenshot is now a real `gpt-6-luna` run (the Q1 net revenue answer) on the public Recorded runs page, with links to the phone view and a guard refusal. The screenshots come from `e2e/screenshots.spec.ts` (`-g recorded`), run against the live stack with `PLAYWRIGHT_BASE_URL=http://127.0.0.1:8088`: replays, so no model call. The old keyless `ask-*`/`login-*` screenshots stay in `docs/screenshots/` but are no longer in the README.
