@@ -31,7 +31,7 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 
 ## Open issues
 
-- The first CI run on GitHub (run 41382216337, commit `78109c4`) hung in the Playwright smoke test after every other step passed; fixed in the next commit (D045). Run 1 may still show as running until GitHub's 6-hour job limit, unless Baron cancels it in the Actions tab.
+- The first CI run on GitHub (run 41382216337, commit `78109c4`) hung in the Playwright smoke test after every other step passed; fixed in `390f95a` (D045); run 41386054419 on that commit is green. Run 1 may still show as running until GitHub's 6-hour job limit, unless Baron cancels it in the Actions tab.
 - Local `web/node_modules` is incomplete: an `npm ci` on 2026-11-02 was blocked by a Vite dev server left running since 2026-10-30 (PID 32376, port 5173). Baron stops it, then runs `uv run poe web-install`. Until then `poe web-check` and `poe web-e2e` can't run locally.
 - Rate limits live in memory in one API process (D032): fine for one container, not for several instances.
 - Sessions are stateless JWTs: sign-out clears the cookie, but a copied token stays valid until it expires (8 h, D033).
@@ -45,8 +45,7 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 
 ## Next step
 
-1. Confirm the CI run for the timeout fix is green on GitHub (https://github.com/Baron197/agentic-sql-analyst/actions).
-2. Phase 8: deploy to AWS EC2 (BUILD_GUIDE §13), only when Baron says so. Start with a plan; it needs his answers to the Phase 8 open questions above.
+Phase 8: deploy to AWS EC2 (BUILD_GUIDE §13), only when Baron says so. Start with a plan; it needs his answers to the Phase 8 open questions above.
 
 ## Session log
 
@@ -56,7 +55,7 @@ _(newest first: date, what was done, decisions, issues)_
 
 - Baron chose AWS EC2 for Phase 8, the public repository `Baron197/agentic-sql-analyst`, and the MIT license.
 - **Before the push:** no secret in any commit (every real `.env` value checked against the whole history), `.env`, `runs/`, and `.cache/` gitignored, commits under the GitHub noreply address. MIT `LICENSE` added (`78109c4`).
-- **First CI run:** the web job and every backend step passed, including `poe check`, the eval gates, and the keyless agent gate, but the Playwright smoke test never exited. Reproduced in the Linux Playwright image: the test passed in 2.9 s, then hung on teardown. Fix (D045): stop the web servers with SIGTERM; job and step timeouts so a hang fails in minutes. Verified in the same image: pass and exit in 7 s.
+- **First CI run:** the web job and every backend step passed, including `poe check`, the eval gates, and the keyless agent gate, but the Playwright smoke test never exited. Reproduced in the Linux Playwright image: the test passed in 2.9 s, then hung on teardown. Fix (D045): stop the web servers with SIGTERM; job and step timeouts so a hang fails in minutes. Verified in the same image: pass and exit in 7 s. The CI run on `390f95a` is green (the smoke step takes 6 s).
 
 ### 2026-11-01 to 2026-11-02: Phase 7 real-mode evaluation (completed)
 
