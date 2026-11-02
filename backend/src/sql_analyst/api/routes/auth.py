@@ -5,6 +5,8 @@ DEMO_LOGIN_ENABLED=true (the public demo, Phase 8), so the demo passwords never 
 shown on the page or shipped in the JavaScript (docs/DECISIONS.md D036).
 """
 
+import secrets
+
 from fastapi import APIRouter, Request, Response
 
 from sql_analyst.api.auth import (
@@ -84,5 +86,7 @@ def demo_login(body: DemoLoginRequest, request: Request, response: Response, res
     if user is None:
         raise api_error(503, "demo_users_missing", "The demo users are not set up.")
     request.state.user_id = user.user_id
-    set_session_cookie(response, issue_token(user.user_id, res), res)
+    # Visitors share the demo account, so each sign-in gets its own history session (D048).
+    token = issue_token(user.user_id, res, session_id=secrets.token_hex(16))
+    set_session_cookie(response, token, res)
     return _me(user)

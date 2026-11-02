@@ -104,20 +104,29 @@ class Agent:
         self.deps = deps
         self.graph = build_graph(deps)
 
-    def _start(self, question: str, user: UserScope) -> AgentState:
+    def _start(self, question: str, user: UserScope, session_id: str | None) -> AgentState:
         return AgentState(
-            run_id=uuid.uuid4().hex, question=question, user=user, started=time.perf_counter()
+            run_id=uuid.uuid4().hex,
+            question=question,
+            user=user,
+            session_id=session_id,
+            started=time.perf_counter(),
         )
 
-    def ask(self, question: str, user: UserScope) -> AgentResult:
-        out = self.graph.invoke(self._start(question, user), config={"recursion_limit": 60})
+    def ask(self, question: str, user: UserScope, session_id: str | None = None) -> AgentResult:
+        start = self._start(question, user, session_id)
+        out = self.graph.invoke(start, config={"recursion_limit": 60})
         return out["response"]
 
-    def stream(self, question: str, user: UserScope) -> Iterator[NodeEvent | AgentResult]:
+    def stream(
+        self, question: str, user: UserScope, session_id: str | None = None
+    ) -> Iterator[NodeEvent | AgentResult]:
         """Yield each node's NodeEvent as soon as the node finishes, then the AgentResult."""
         result: AgentResult | None = None
         for chunk in self.graph.stream(
-            self._start(question, user), config={"recursion_limit": 60}, stream_mode="updates"
+            self._start(question, user, session_id),
+            config={"recursion_limit": 60},
+            stream_mode="updates",
         ):
             for update in chunk.values():
                 yield update["trace"][-1]

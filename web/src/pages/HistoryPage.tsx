@@ -5,15 +5,8 @@ import { ApiError, api } from "../api/client";
 import type { RunSummary } from "../api/types";
 import { RunResult } from "../components/RunResult";
 import { formatMs, formatUsd } from "../lib/format";
-import { fromRecord } from "../lib/run";
+import { STATUS_TONE, fromRecord } from "../lib/run";
 import type { RunView } from "../lib/run";
-
-const STATUS_TONE: Record<string, string> = {
-  answered: "text-accent-soft",
-  refused: "text-warn",
-  partial: "text-warn",
-  error: "text-danger",
-};
 
 export function HistoryPage() {
   const [runs, setRuns] = useState<RunSummary[] | null>(null);

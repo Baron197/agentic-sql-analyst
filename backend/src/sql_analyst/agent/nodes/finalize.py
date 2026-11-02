@@ -31,6 +31,7 @@ class AgentResult(BaseModel):
     created_at: str
     question: str
     user_id: str
+    session_id: str | None = None
     role: str
     lang: str
     status: Status
@@ -113,6 +114,7 @@ def finalize(state: AgentState, deps: AgentDeps) -> dict[str, Any]:
         created_at=datetime.now().astimezone().isoformat(timespec="seconds"),
         question=state.question,
         user_id=state.user.user_id,
+        session_id=state.session_id,
         role=state.user.role,
         lang=state.lang,
         status=status,

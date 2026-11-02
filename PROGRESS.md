@@ -14,7 +14,7 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 | 5 API | **done** (2026-10-30) | all DoD items pass; see session log |
 | 6 Web app | **done** (2026-10-30) | all DoD items pass; see session log |
 | 7 Real-mode evaluation | **done** (2026-11-02) | all DoD items pass; live model `gpt-6-luna` confirmed by Baron (D043) |
-| 8 Deploy | **in progress** | stack built, CI-tested, and documented; waiting for Baron's AWS setup (DEPLOYMENT.md steps 1-5) |
+| 8 Deploy | **in progress** | stack built, CI-tested, and documented; per-session demo history and recorded runs added (D048); waiting for Baron's recorded runs and AWS setup |
 | 9 Portfolio packaging | not started | |
 
 ## Decided in the planning chat (2026-10-29)
@@ -46,7 +46,8 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 
 ## Next step
 
-Phase 8, the server part (plan approved by Baron on 2026-11-02, D047):
+Phase 8, recorded runs then the server part (plans approved by Baron on 2026-11-02, D047, D048):
+0. Baron asks live questions in the local production stack (http://127.0.0.1:8088; `.env.prodtest`, gitignored, has live mode on) and picks the runs to publish. Then dump, `poe recorded-add … --ids …`, review `data/recorded_runs.json` and `docs/RECORDED_RUNS.md`, link RECORDED_RUNS.md from the README, commit (DEPLOYMENT.md "Publishing recorded live runs").
 1. Baron follows docs/DEPLOYMENT.md steps 1-5 on AWS (new `t4g.small`, Elastic IP, DuckDNS, swap, Docker, clone, `make-env.sh`, OpenAI key into `.env` by hand, build, seed, up). Claude can't do the console or SSH steps.
 2. DoD proofs on the public URL (paid part approved, under $0.01): step 6 with `--expect-status 503` (kill switch), then live mode on and `--ask` (one live question end to end), then step 7 with `DAILY_BUDGET_USD=0` and `--expect-status 429` (budget cap), then the budget back to 1.00. Record the outputs in the session log.
 3. Add the live URL to README.md, update this file, commit. Then Phase 9 only when Baron says so.
@@ -54,6 +55,13 @@ Phase 8, the server part (plan approved by Baron on 2026-11-02, D047):
 ## Session log
 
 _(newest first: date, what was done, decisions, issues)_
+
+### 2026-11-02: per-session demo history and recorded live runs (D048)
+
+- **Found while planning recorded runs:** all one-click demo visitors share `analyst@demo`, so History would have shown every visitor's questions to everyone. Fixed before any public deploy: a demo sign-in gets a random session id in its token, runs store it (`app.runs.session_id`, added by `app-setup`), and History filters by it. The sign-in page now says questions are stored and demo history stays in the browser session.
+- **Recorded runs:** `sql_analyst/recorded.py` (`dump`, `add`, `docs`; poe `recorded-dump`, `recorded-add`, `recorded-docs`), the public `GET /api/recorded-runs`, and public *Recorded runs* pages in the web app (list and replay, the same components as a live answer; a "Sign in to ask" button for visitors). Only live runs; the published form drops user and session ids.
+- **Verified:** `poe check` (751 tests, incl. two demo sessions on one account not seeing each other's runs, and the public endpoint), the web check in a Linux Node container (28 tests, lint, Prettier, typecheck, build; the local `web/node_modules` is still broken), the local production stack rebuilt and migrated with the smoke test passing, `recorded dump` inside the stack, and the public page in Chromium with no errors.
+- **Local live stack:** running at http://127.0.0.1:8088 with `.env.prodtest` (live, `gpt-6-luna`, $1/day). No questions asked yet: $0 spent.
 
 ### 2026-11-02: Phase 8 part 1 (production stack, CI, runbook)
 

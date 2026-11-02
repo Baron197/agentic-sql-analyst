@@ -79,6 +79,7 @@ class AgentState(BaseModel):
     run_id: str = ""
     question: str
     user: UserScope
+    session_id: str | None = None  # a demo sign-in's browser session (API); scopes its history
     lang: Literal["en", "id"] = "en"
     started: float = 0.0  # time.perf_counter() at the start of the run
     goto: str | None = None  # set by a node to leave the default path (repair, refuse, finalize)

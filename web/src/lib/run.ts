@@ -25,6 +25,13 @@ export const STEP_LABELS: Record<string, string> = {
 
 export const stepLabel = (node: string) => STEP_LABELS[node] ?? node;
 
+export const STATUS_TONE: Record<string, string> = {
+  answered: "text-accent-soft",
+  refused: "text-warn",
+  partial: "text-warn",
+  error: "text-danger",
+};
+
 export interface RunView {
   phase: "idle" | "running" | "done" | "error";
   question: string;

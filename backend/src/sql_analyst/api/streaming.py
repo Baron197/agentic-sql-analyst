@@ -25,10 +25,12 @@ def sse(event: str, data: Any) -> str:
     return f"event: {event}\ndata: {payload}\n\n"
 
 
-def ask_events(agent: Agent, question: str, user: UserScope) -> Iterator[str]:
+def ask_events(
+    agent: Agent, question: str, user: UserScope, session_id: str | None = None
+) -> Iterator[str]:
     try:
         result: AgentResult | None = None
-        for item in agent.stream(question, user):
+        for item in agent.stream(question, user, session_id):
             if isinstance(item, NodeEvent):
                 yield sse(
                     "step", {"node": item.node, "status": "done", "ms": item.ms, "note": item.note}

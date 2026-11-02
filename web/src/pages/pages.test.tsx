@@ -1,11 +1,12 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AuthProvider } from "../auth";
 import { AskPage } from "./AskPage";
 import { LoginPage } from "./LoginPage";
+import { RecordedRunPage, RecordedRunsPage } from "./RecordedPage";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
@@ -179,6 +180,10 @@ describe("LoginPage", () => {
     });
     const { unmount } = renderLogin();
     expect(await screen.findByRole("button", { name: "Try as analyst" })).toBeInTheDocument();
+    expect(screen.getByText(/history is visible only in this browser session/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "See recorded live runs without signing in" }),
+    ).toHaveAttribute("href", "/recorded");
     unmount();
 
     mockFetch({
@@ -190,5 +195,75 @@ describe("LoginPage", () => {
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: "Try as analyst" })).not.toBeInTheDocument(),
     );
+  });
+});
+
+describe("Recorded runs (public)", () => {
+  const RUN = {
+    run_id: "abc123",
+    created_at: "2026-11-02T14:05:00+07:00",
+    question: "Berapa pendapatan bersih per kanal pada Q1 2026?",
+    lang: "id",
+    role: "analyst",
+    provider: "openai",
+    model: "gpt-6-luna",
+    status: "answered",
+    answer: "Pada Q1 2026, Toko fisik menghasilkan pendapatan bersih tertinggi (IDR 9,29 M).",
+    sql: "SELECT channel_name, net_revenue_idr FROM analytics.fact_orders",
+    columns: ["channel_name", "net_revenue_idr"],
+    rows: [["Toko fisik", 9285162700]],
+    row_count: 1,
+    truncated: false,
+    chart: { type: "table", x: null, y: null },
+    assumptions: [],
+    caveats: [],
+    refusal: null,
+    suggestions: [],
+    repairs: 0,
+    trace: [{ node: "generate_sql", ms: 2100, note: "confidence high" }],
+    usage: {
+      llm_calls: 2,
+      input_tokens: 3000,
+      output_tokens: 300,
+      cache_read_tokens: 2000,
+      cache_write_tokens: 0,
+      cost_usd: 0.000512,
+      keyless: false,
+    },
+    elapsed_ms: 6234.5,
+  };
+
+  const renderAt = (path: string) =>
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/recorded" element={<RecordedRunsPage />} />
+          <Route path="/recorded/:runId" element={<RecordedRunPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+  it("lists the recorded runs without signing in", async () => {
+    const fetchMock = mockFetch({ "/api/recorded-runs": () => json({ runs: [RUN] }) });
+    renderAt("/recorded");
+    const link = await screen.findByRole("link", { name: /Berapa pendapatan bersih/ });
+    expect(link).toHaveAttribute("href", "/recorded/abc123");
+    expect(screen.getByText("gpt-6-luna")).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(1); // no /api/me: the page needs no session
+  });
+
+  it("replays one run with its answer, SQL, and rows", async () => {
+    mockFetch({ "/api/recorded-runs": () => json({ runs: [RUN] }) });
+    renderAt("/recorded/abc123");
+    expect(await screen.findByRole("heading", { name: RUN.question })).toBeInTheDocument();
+    expect(screen.getByText(/no model call/)).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Answer" })).toHaveTextContent("Toko fisik");
+    expect(screen.getByRole("table")).toHaveTextContent("Toko fisik");
+  });
+
+  it("says so for an unknown run", async () => {
+    mockFetch({ "/api/recorded-runs": () => json({ runs: [] }) });
+    renderAt("/recorded/nope");
+    expect(await screen.findByRole("alert")).toHaveTextContent("No such recorded run.");
   });
 });

@@ -5,6 +5,7 @@ import { useAuth } from "../auth";
 const NAV = [
   { to: "/", label: "Ask", end: true },
   { to: "/history", label: "History", end: false },
+  { to: "/recorded", label: "Recorded runs", end: false },
   { to: "/dictionary", label: "Data dictionary", end: false },
   { to: "/about", label: "About", end: false },
 ];
@@ -70,6 +71,11 @@ export function Layout() {
               </NavLink>
             ))}
           </nav>
+          {user === null && (
+            <NavLink to="/login" className="btn-primary ml-auto px-3 py-1.5 text-sm">
+              Sign in to ask
+            </NavLink>
+          )}
           {user && (
             <div className="ml-auto flex items-center gap-3">
               <span className="hidden text-right text-xs leading-tight sm:block">

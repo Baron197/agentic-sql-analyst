@@ -31,7 +31,12 @@ CREATE TABLE IF NOT EXISTS app.runs (
     elapsed_ms         double precision NOT NULL,
     record             jsonb NOT NULL                -- the full AgentResult (rows trimmed)
 );
+-- A demo sign-in's browser session: its history shows only its own runs (D048). NULL for
+-- password sign-ins, which see all of the user's runs.
+ALTER TABLE app.runs ADD COLUMN IF NOT EXISTS session_id text;
 CREATE INDEX IF NOT EXISTS runs_user_created ON app.runs (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS runs_session_created ON app.runs (session_id, created_at DESC)
+    WHERE session_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS runs_created ON app.runs (created_at);
 
 -- The API's login reads users and appends runs; it cannot update or delete anything,

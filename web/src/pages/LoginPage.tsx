@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router";
+import { Link, Navigate, useLocation, useNavigate } from "react-router";
 
 import { ApiError, api } from "../api/client";
 import type { AuthOptions } from "../api/types";
@@ -128,10 +128,20 @@ export function LoginPage() {
                   </li>
                 ))}
               </ul>
+              <p className="mt-4 text-xs text-ink-mute">
+                Questions you ask are stored, so you can see your history and the demo can keep to
+                its daily budget. With a demo account, your history is visible only in this browser
+                session.
+              </p>
             </div>
           )}
         </div>
-        <FictionalNotice className="mt-5 text-center" />
+        <p className="mt-5 text-center text-sm">
+          <Link to="/recorded" className="text-accent hover:underline">
+            See recorded live runs without signing in
+          </Link>
+        </p>
+        <FictionalNotice className="mt-3 text-center" />
       </div>
     </div>
   );

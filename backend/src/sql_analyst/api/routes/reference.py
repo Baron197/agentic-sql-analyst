@@ -1,9 +1,10 @@
-"""GET /api/schema and GET /api/examples."""
+"""GET /api/schema, GET /api/examples, and GET /api/recorded-runs (public)."""
 
 from typing import Any
 
 from fastapi import APIRouter
 
+from sql_analyst import recorded
 from sql_analyst.agent.keyless import load_demo
 from sql_analyst.api.auth import CurrentUser, Res
 from sql_analyst.users import DEMO_USERS
@@ -56,3 +57,9 @@ def examples(user: CurrentUser, res: Res) -> dict[str, Any]:
         "keyless": not res.live,
         "examples": [{"question": d.question, "lang": d.lang} for d in demos],
     }
+
+
+@router.get("/recorded-runs", response_model=recorded.RecordedRuns)
+def recorded_runs() -> recorded.RecordedRuns:
+    """Real live-model runs recorded in the app and published (public, no sign-in; D048)."""
+    return recorded.load()

@@ -18,7 +18,7 @@ log = logging.getLogger("sql_analyst.api")
 def ask(body: AskRequest, request: Request, user: CurrentUser, res: Res) -> AskResponse:
     """Answer a question as the signed-in user (their region scope applies)."""
     check_ask_allowed(res, user.user_id)
-    result = res.agent.ask(body.question, user.scope())
+    result = res.agent.ask(body.question, user.scope(), session_id=user.session_id)
     request.state.run_id = result.run_id
     log.info("ask finished", extra={"run_id": result.run_id, "status": result.status})
     return ask_response(result)
@@ -33,7 +33,7 @@ def ask_stream(body: AskRequest, user: CurrentUser, res: Res) -> StreamingRespon
     """The same run as server-sent events: step..., sql, rows, answer, done (or error)."""
     check_ask_allowed(res, user.user_id)
     return StreamingResponse(
-        ask_events(res.agent, body.question, user.scope()),
+        ask_events(res.agent, body.question, user.scope(), user.session_id),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

@@ -143,7 +143,24 @@ All commands run in the repo folder on the server. `.env` changes take effect wh
 
 **Backups.** None are needed for the data: `seed` rebuilds it deterministically. Stored runs (`app.runs`) are demo history and are lost only if the `pgdata` volume is deleted.
 
-**Shared demo account.** Every visitor who clicks "Try as analyst" uses the same `analyst@demo` user, so its limit of 10 questions a minute and the daily budget are shared by all visitors. That is the intended ceiling for a public demo.
+**Shared demo account.** Every visitor who clicks "Try as analyst" uses the same `analyst@demo` user, so its limit of 10 questions a minute and the daily budget are shared by all visitors. That is the intended ceiling for a public demo. Their histories are not shared: each demo sign-in sees only the runs of its own browser session (D048).
+
+## Publishing recorded live runs
+
+Visitors can read real live-model answers on the public *Recorded runs* page (and on GitHub in [RECORDED_RUNS.md](RECORDED_RUNS.md)) without signing in or spending anything. The runs come from a committed file, `data/recorded_runs.json`, and you choose which ones go in (D048).
+
+1. Ask the questions in a live stack (locally or on the server) and note the run ids you want: each run's id is at the bottom of its run details.
+2. Dump the live runs as stored, into the gitignored `runs/` folder:
+   ```bash
+   infra/compose.sh run --rm -T seed python -m sql_analyst.recorded dump --since 2026-11-02 > runs/dump.json
+   ```
+3. Publish the chosen ones (this writes `data/recorded_runs.json` and regenerates `docs/RECORDED_RUNS.md`):
+   ```bash
+   uv run poe recorded-add runs/dump.json --ids RUN_ID,RUN_ID
+   ```
+4. Review both files, commit, and push. On the server: `git pull && infra/compose.sh build api && infra/compose.sh up -d --wait`.
+
+Keyless runs are refused, and the published form leaves out who asked (user and session ids), the retrieved context, and the per-call details.
 
 ## Taking it down
 

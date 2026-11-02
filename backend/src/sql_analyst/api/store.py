@@ -23,6 +23,8 @@ class StoredUser(BaseModel):
     password_hash: str
     role: str
     region_ids: list[int] | None
+    # Set from the session token, not the table: a demo sign-in's browser session (D048).
+    session_id: str | None = None
 
     def scope(self) -> UserScope:
         return UserScope(
@@ -65,36 +67,45 @@ class AppStore:
         u = record["usage"]
         with self.pool.connection() as conn:
             conn.execute(
-                "INSERT INTO app.runs (run_id, user_id, status, question, provider, model, keyless, "
-                "llm_calls, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, "
-                "cost_usd, elapsed_ms, record) "
-                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                "INSERT INTO app.runs (run_id, user_id, session_id, status, question, provider, "
+                "model, keyless, llm_calls, input_tokens, output_tokens, cache_read_tokens, "
+                "cache_write_tokens, cost_usd, elapsed_ms, record) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (
-                    record["run_id"], record["user_id"], record["status"], record["question"],
+                    record["run_id"], record["user_id"], record.get("session_id"),
+                    record["status"], record["question"],
                     record["provider"], record["model"], u["keyless"], u["llm_calls"],
                     u["input_tokens"], u["output_tokens"], u["cache_read_tokens"],
                     u["cache_write_tokens"], u["cost_usd"], record["elapsed_ms"], Jsonb(record),
                 ),
             )  # fmt: skip
 
-    def runs(self, user_id: str, limit: int = 20) -> list[dict[str, Any]]:
+    def runs(
+        self, user_id: str, limit: int = 20, session_id: str | None = None
+    ) -> list[dict[str, Any]]:
+        """The user's latest runs; with a session id, only that browser session's (D048)."""
         with self.pool.connection() as conn:
             return (
                 conn.cursor(row_factory=dict_row)
                 .execute(
                     "SELECT run_id, created_at, status, question, model, keyless, cost_usd::float, "
-                    "elapsed_ms FROM app.runs WHERE user_id = %s ORDER BY created_at DESC LIMIT %s",
-                    (user_id, limit),
+                    "elapsed_ms FROM app.runs WHERE user_id = %s "
+                    "AND (%s::text IS NULL OR session_id = %s) "
+                    "ORDER BY created_at DESC LIMIT %s",
+                    (user_id, session_id, session_id, limit),
                 )
                 .fetchall()
             )
 
-    def run(self, run_id: str, user_id: str) -> dict[str, Any] | None:
-        """A run's full record, only if it belongs to `user_id`."""
+    def run(
+        self, run_id: str, user_id: str, session_id: str | None = None
+    ) -> dict[str, Any] | None:
+        """A run's full record, only if it belongs to `user_id` (and the session, if given)."""
         with self.pool.connection() as conn:
             row = conn.execute(
-                "SELECT record FROM app.runs WHERE run_id = %s AND user_id = %s",
-                (run_id, user_id),
+                "SELECT record FROM app.runs WHERE run_id = %s AND user_id = %s "
+                "AND (%s::text IS NULL OR session_id = %s)",
+                (run_id, user_id, session_id, session_id),
             ).fetchone()
         return row[0] if row else None
 

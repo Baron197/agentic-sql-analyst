@@ -7,6 +7,7 @@ import { AskPage } from "./pages/AskPage";
 import { DictionaryPage } from "./pages/DictionaryPage";
 import { HistoryPage, RunPage } from "./pages/HistoryPage";
 import { LoginPage } from "./pages/LoginPage";
+import { RecordedRunPage, RecordedRunsPage } from "./pages/RecordedPage";
 
 function NotFound() {
   return (
@@ -23,6 +24,11 @@ export function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      {/* Public: recorded live runs can be read without signing in (D048). */}
+      <Route element={<Layout />}>
+        <Route path="recorded" element={<RecordedRunsPage />} />
+        <Route path="recorded/:runId" element={<RecordedRunPage />} />
+      </Route>
       <Route
         element={
           <RequireAuth>

@@ -124,6 +124,18 @@ shell = "npm --prefix web run e2e"
 help = "Screenshots of the sign-in and Ask pages at 375 px and 1280 px into docs/screenshots/"
 shell = "npm --prefix web run screenshots"
 
+[tool.poe.tasks.recorded-dump]
+help = "Print the live runs in the run store as JSON (--since YYYY-MM-DD); redirect to a file for recorded-add"
+cmd = "python -m sql_analyst.recorded dump"
+
+[tool.poe.tasks.recorded-add]
+help = "Publish runs from a dump: recorded-add FILE [--ids ID,ID] (writes data/recorded_runs.json and docs/RECORDED_RUNS.md)"
+cmd = "python -m sql_analyst.recorded add"
+
+[tool.poe.tasks.recorded-docs]
+help = "Regenerate docs/RECORDED_RUNS.md from data/recorded_runs.json"
+cmd = "python -m sql_analyst.recorded docs"
+
 [tool.poe.tasks.smoke-public]
 help = "Smoke-test a deployed stack: --url https://HOST [--ask] [--expect-status 429|503] (--ask is paid in live mode)"
 cmd = "python infra/smoke_public.py"

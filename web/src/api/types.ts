@@ -121,6 +121,13 @@ export interface RunRecord {
   elapsed_ms: number;
 }
 
+/** A real live-model run recorded in the app and published (GET /api/recorded-runs, D048). */
+export interface RecordedRun extends RunRecord {
+  lang: string;
+  role: string;
+  provider: string;
+}
+
 export interface SchemaColumn {
   name: string;
   type: string;

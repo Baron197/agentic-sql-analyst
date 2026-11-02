@@ -9,6 +9,7 @@ import type {
   ErrorEvent,
   Example,
   Me,
+  RecordedRun,
   RowsEvent,
   RunRecord,
   RunSummary,
@@ -75,6 +76,7 @@ export const api = {
   schema: () => call<Schema>("/api/schema"),
   runs: (limit = 50) => call<{ runs: RunSummary[] }>(`/api/runs?limit=${limit}`),
   run: (runId: string) => call<RunRecord>(`/api/runs/${encodeURIComponent(runId)}`),
+  recordedRuns: () => call<{ runs: RecordedRun[] }>("/api/recorded-runs"),
 };
 
 export interface StreamHandlers {
