@@ -52,3 +52,7 @@ uv run poe ask "What was net revenue by sales channel in Q1 2026?" --user manage
 uv run poe api         # http://127.0.0.1:8000/api/docs (sign in with a demo user from .env)
 uv run poe web-install && uv run poe web   # http://127.0.0.1:5173 (with `poe api` running)
 ```
+
+## License
+
+[MIT](LICENSE). The company and all data in this repository are fictional and synthetic.
