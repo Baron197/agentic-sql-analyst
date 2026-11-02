@@ -27,13 +27,12 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 
 ## Open questions for Baron
 
-- Deploy target for Phase 8: Azure (A) or the existing AWS EC2 (B).
-- GitHub repository name and visibility (only when Baron says to push). CI has not run on GitHub yet; it is only schema-validated locally.
-- License: none chosen yet (the flagship uses MIT). Add before the repo goes public.
+- Phase 8 (AWS EC2, Baron's choice on 2026-11-02): which instance (shared with the flagship or new, and its size; Postgres plus the embedding model need about 2 GB RAM), the domain or subdomain for HTTPS, and the daily budget cap for the public demo (suggested $1/day, the current default). An optional free keyless mirror (for example Render free plus Neon free with pgvector) comes after EC2 works; check current free-tier terms first.
 
 ## Open issues
 
-- CI has never run on GitHub (nothing pushed). Its db tests assume the full-scale seed, which the workflow loads with `poe db-load` before `poe check`; the workflow sets throwaway `NLQ_READER_PASSWORD` and `RLS_SIGNING_KEY` values.
+- The first CI run on GitHub (run 41382216337, commit `78109c4`) hung in the Playwright smoke test after every other step passed; fixed in the next commit (D045). Run 1 may still show as running until GitHub's 6-hour job limit, unless Baron cancels it in the Actions tab.
+- Local `web/node_modules` is incomplete: an `npm ci` on 2026-11-02 was blocked by a Vite dev server left running since 2026-10-30 (PID 32376, port 5173). Baron stops it, then runs `uv run poe web-install`. Until then `poe web-check` and `poe web-e2e` can't run locally.
 - Rate limits live in memory in one API process (D032): fine for one container, not for several instances.
 - Sessions are stateless JWTs: sign-out clears the cookie, but a copied token stays valid until it expires (8 h, D033).
 - The function allow-list (D014) may refuse a legitimate function the agent needs; watch for `forbidden_function` errors in the Phase 3/4 eval and add functions deliberately.
@@ -46,11 +45,18 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 
 ## Next step
 
-Phase 8: deploy (BUILD_GUIDE §13), only when Baron says so. Needs his answers first: deploy target (Azure or AWS EC2), GitHub repository name and visibility plus the OK to push (CI has never run on GitHub), and a license. Start with a plan.
+1. Confirm the CI run for the timeout fix is green on GitHub (https://github.com/Baron197/agentic-sql-analyst/actions).
+2. Phase 8: deploy to AWS EC2 (BUILD_GUIDE §13), only when Baron says so. Start with a plan; it needs his answers to the Phase 8 open questions above.
 
 ## Session log
 
 _(newest first: date, what was done, decisions, issues)_
+
+### 2026-11-02: published on GitHub
+
+- Baron chose AWS EC2 for Phase 8, the public repository `Baron197/agentic-sql-analyst`, and the MIT license.
+- **Before the push:** no secret in any commit (every real `.env` value checked against the whole history), `.env`, `runs/`, and `.cache/` gitignored, commits under the GitHub noreply address. MIT `LICENSE` added (`78109c4`).
+- **First CI run:** the web job and every backend step passed, including `poe check`, the eval gates, and the keyless agent gate, but the Playwright smoke test never exited. Reproduced in the Linux Playwright image: the test passed in 2.9 s, then hung on teardown. Fix (D045): stop the web servers with SIGTERM; job and step timeouts so a hang fails in minutes. Verified in the same image: pass and exit in 7 s.
 
 ### 2026-11-01 to 2026-11-02: Phase 7 real-mode evaluation (completed)
 

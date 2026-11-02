@@ -358,3 +358,10 @@ Short entries, newest last: context, decision, why, alternatives considered.
   - the critic stays off by default (D028). On test it lowered EX relabeled from 0.933 to 0.873, raised false refusals from 0.013 to 0.067, and added 36% to the cost;
   - retrieval, repair, and few-shot stay on although their ablations were null on this schema. They are cheap, and they are what a larger schema would need. The docs say they were not measured to help here.
 - **Follow-ups worth doing on dev first:** add dev cases for "city" questions and partly covered periods, so a future fix has dev evidence; consider an EX variant that accepts a pivoted result (wide vs long) as a scorer improvement, decided before the next test run.
+
+## D045: Playwright stops its web servers with SIGTERM; CI jobs have timeouts (2026-11-02)
+
+- **Context:** the first CI run on GitHub hung in the smoke test. On Linux, poethepoet starts its task in a new session (`start_new_session=True`), so Playwright's default teardown, SIGKILL to the process group of `uv run poe api`, never reaches uvicorn. The orphan holds the output pipe open and Playwright waits forever. Windows was not affected, and local runs reused already-running servers.
+- **Decision:** `gracefulShutdown: { signal: "SIGTERM" }` for both web servers in `web/playwright.config.ts`. poe catches SIGTERM and stops its child. Also a Playwright `globalTimeout` of 10 minutes, and `timeout-minutes` on both CI jobs and the smoke step.
+- **Why:** it keeps `poe api` as the one way to start the API. Verified in the Linux Playwright image: before, the test passed and the run hung; after, it passed and exited in 7 s.
+- **Alternatives:** call `uv run uvicorn …` directly in the Playwright config (works, but duplicates the poe task's command); a CI-only kill step after the test (treats the symptom).

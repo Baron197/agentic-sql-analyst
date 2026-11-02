@@ -12,6 +12,8 @@ permissions:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    # A healthy run takes about 4 minutes; fail fast if something hangs.
+    timeout-minutes: 20
     services:
       db:
         image: pgvector/pgvector:pg16
@@ -80,9 +82,11 @@ jobs:
           npx --prefix web playwright install --with-deps chromium
       - name: Smoke test (Playwright, keyless)
         run: npm --prefix web run e2e
+        timeout-minutes: 10
 
   web:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: web

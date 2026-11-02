@@ -16,9 +16,15 @@ function demoPassword(): string {
 }
 process.env.DEMO_ANALYST_PASSWORD = demoPassword();
 
+// On Linux, poe starts its task in a new session, so Playwright's default teardown (SIGKILL to
+// the process group) misses uvicorn, which then holds the pipe open and the run never exits.
+// SIGTERM lets poe stop its child first. Windows ignores this option and works without it.
+const stopGracefully = { signal: "SIGTERM", timeout: 10_000 } as const;
+
 export default defineConfig({
   testDir: "e2e",
   timeout: 60_000,
+  globalTimeout: 10 * 60_000,
   retries: process.env.CI ? 1 : 0,
   reporter: [["list"]],
   use: {
@@ -34,12 +40,14 @@ export default defineConfig({
       cwd: "..",
       url: "http://127.0.0.1:8000/api/health",
       reuseExistingServer: !process.env.CI,
+      gracefulShutdown: stopGracefully,
       timeout: 120_000,
     },
     {
       command: "npm run dev",
       url: "http://127.0.0.1:5173",
       reuseExistingServer: !process.env.CI,
+      gracefulShutdown: stopGracefully,
       timeout: 60_000,
     },
   ],
