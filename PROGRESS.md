@@ -56,6 +56,14 @@ Phase 8, recorded runs then the server part (plans approved by Baron on 2026-11-
 
 _(newest first: date, what was done, decisions, issues)_
 
+### 2026-11-02: public Evaluation page and a fuller About page (D050)
+
+- **Evaluation page** (public, `/evaluation`): findings, quality and speed/cost tables (mean ± std), and what each score means, from `data/eval_summary.json`. `poe eval-summary` writes that file from the 7 test-split result files; a test fails if it drifts from them. Served at the public `GET /api/eval-summary`; each row links to its result file on GitHub.
+- **About page** (now public): using the demo (what to ask, the data window, the two accounts, live vs keyless, limits, history), a results summary, the stack, and links to the repo and docs.
+- **Header:** the mode badge and the sign-in/sign-out controls are one group, so they stay together when the header wraps; below 1280 px the badge reads "Live" (the model is in its tooltip and for screen readers).
+- **Docs:** DEPLOYMENT.md no longer says the History page shows spend and latency (only `/api/metrics` does).
+- **Verified:** `poe check` (755 tests), the web check in a Node container (32 tests), the rebuilt local stack, and Chromium at 375, 1024, and 1280 px (no page overflow; no console errors besides the expected signed-out 401).
+
 ### 2026-11-02: History chart fix; live/keyless mode shown in the app (D049)
 
 - **Bug (found by Baron):** the first live run's History page showed an empty bar chart. Stored runs had result numbers as strings (pydantic writes `Decimal` as a string); the stream didn't. Fixed with a `Cell` type for result rows, so stored runs, `POST /api/ask`, and `ask --json` all write numbers. The one run stored before the fix was converted in the local stack's database.

@@ -1,0 +1,529 @@
+{
+ "runs": [
+  {
+   "file": "2026-11-01_agent_live_test_gpt-6-luna_n60_r3.json",
+   "date": "2026-11-01",
+   "commit": "00d528b",
+   "system": "agent",
+   "mode": "live",
+   "split": "test",
+   "model": "gpt-6-luna",
+   "n_questions": 60,
+   "repeats": 3,
+   "metrics": {
+    "ex_strict": {
+     "mean": 0.6867,
+     "std": 0.0306
+    },
+    "ex_lenient": {
+     "mean": 0.9133,
+     "std": 0.0231
+    },
+    "ex_relabeled": {
+     "mean": 0.9333,
+     "std": 0.0231
+    },
+    "valid_sql_rate": {
+     "mean": 0.9867,
+     "std": 0.0115
+    },
+    "repair_rate": {
+     "mean": 0.0133,
+     "std": 0.0115
+    },
+    "false_refusal_rate": {
+     "mean": 0.0133,
+     "std": 0.0115
+    },
+    "assumption_rate": {
+     "mean": 0.9333,
+     "std": 0.1155
+    },
+    "refusal_accuracy": {
+     "mean": 1.0,
+     "std": 0.0
+    },
+    "unsafe_refusal_rate": {
+     "mean": 1.0,
+     "std": 0.0
+    },
+    "safety_block_rate": {
+     "mean": 1.0,
+     "std": 0.0
+    },
+    "grounding_violations": {
+     "mean": 0.0,
+     "std": 0.0
+    },
+    "latency_p50_ms": {
+     "mean": 7296.9667,
+     "std": 787.9744
+    },
+    "latency_p95_ms": {
+     "mean": 14366.8,
+     "std": 785.9567
+    },
+    "cache_hit_rate": {
+     "mean": 0.6831,
+     "std": 0.298
+    }
+   },
+   "cost_per_question_usd": {
+    "mean": 0.00047568,
+    "std": 0.00015913
+   },
+   "cost_new_question_usd": 0.00065938,
+   "total_cost_usd": 0.085622
+  },
+  {
+   "file": "2026-11-01_baseline_live_test_gpt-6-luna_n60_r3.json",
+   "date": "2026-11-01",
+   "commit": "00d528b",
+   "system": "baseline",
+   "mode": "live",
+   "split": "test",
+   "model": "gpt-6-luna",
+   "n_questions": 60,
+   "repeats": 3,
+   "metrics": {
+    "ex_strict": {
+     "mean": 0.7,
+     "std": 0.02
+    },
+    "ex_lenient": {
+     "mean": 0.8933,
+     "std": 0.0306
+    },
+    "ex_relabeled": {
+     "mean": 0.9533,
+     "std": 0.0306
+    },
+    "valid_sql_rate": {
+     "mean": 0.9867,
+     "std": 0.0115
+    },
+    "repair_rate": {
+     "mean": null,
+     "std": null
+    },
+    "false_refusal_rate": {
+     "mean": 0.0133,
+     "std": 0.0115
+    },
+    "assumption_rate": {
+     "mean": 1.0,
+     "std": 0.0
+    },
+    "refusal_accuracy": {
+     "mean": 1.0,
+     "std": 0.0
+    },
+    "unsafe_refusal_rate": {
+     "mean": 1.0,
+     "std": 0.0
+    },
+    "safety_block_rate": {
+     "mean": 1.0,
+     "std": 0.0
+    },
+    "grounding_violations": {
+     "mean": 48.3333,
+     "std": 1.1547
+    },
+    "latency_p50_ms": {
+     "mean": 5340.5333,
+     "std": 43.3082
+    },
+    "latency_p95_ms": {
+     "mean": 9225.6667,
+     "std": 326.2106
+    },
+    "cache_hit_rate": {
+     "mean": 0.9745,
+     "std": 0.0124
+    }
+   },
+   "cost_per_question_usd": {
+    "mean": 0.00029054,
+    "std": 6.44e-06
+   },
+   "cost_new_question_usd": 0.00029785,
+   "total_cost_usd": 0.052297
+  },
+  {
+   "file": "2026-11-01_agent-no-retrieval_live_test_gpt-6-luna_n60_r3.json",
+   "date": "2026-11-01",
+   "commit": "00d528b",
+   "system": "agent-no-retrieval",
+   "mode": "live",
+   "split": "test",
+   "model": "gpt-6-luna",
+   "n_questions": 60,
+   "repeats": 3,
+   "metrics": {
+    "ex_strict": {
+     "mean": 0.62,
+     "std": 0.02
+    },
+    "ex_lenient": {
+     "mean": 0.88,
+     "std": 0.02
+    },
+    "ex_relabeled": {
+     "mean": 0.9267,
+     "std": 0.0231
+    },
+    "valid_sql_rate": {
+     "mean": 0.9867,
+     "std": 0.0115
+    },
+    "repair_rate": {
+     "mean": 0.0133,
+     "std": 0.0115
+    },
+    "false_refusal_rate": {
+     "mean": 0.0133,
+     "std": 0.0115
+    },
+    "assumption_rate": {
+     "mean": 0.9333,
+     "std": 0.1155
+    },
+    "refusal_accuracy": {
+     "mean": 1.0,
+     "std": 0.0
+    },
+    "unsafe_refusal_rate": {
+     "mean": 1.0,
+     "std": 0.0
+    },
+    "safety_block_rate": {
+     "mean": 1.0,
+     "std": 0.0
+    },
+    "grounding_violations": {
+     "mean": 0.0,
+     "std": 0.0
+    },
+    "latency_p50_ms": {
+     "mean": 7749.1333,
+     "std": 222.6051
+    },
+    "latency_p95_ms": {
+     "mean": 15244.4333,
+     "std": 1298.4313
+    },
+    "cache_hit_rate": {
+     "mean": 0.9006,
+     "std": 0.0104
+    }
+   },
+   "cost_per_question_usd": {
+    "mean": 0.00045578,
+    "std": 1.228e-05
+   },
+   "cost_new_question_usd": 0.0004694,
+   "total_cost_usd": 0.08204
+  },
+  {
+   "file": "2026-11-01_agent-no-repair_live_test_gpt-6-luna_n60_r3.json",
+   "date": "2026-11-01",
+   "commit": "00d528b",
+   "system": "agent-no-repair",
+   "mode": "live",
+   "split": "test",
+   "model": "gpt-6-luna",
+   "n_questions": 60,
+   "repeats": 3,
+   "metrics": {
+    "ex_strict": {
+     "mean": 0.6733,
+     "std": 0.0306
+    },
+    "ex_lenient": {
+     "mean": 0.9,
+     "std": 0.02
+    },
+    "ex_relabeled": {
+     "mean": 0.9267,
+     "std": 0.0306
+    },
+    "valid_sql_rate": {
+     "mean": 0.98,
+     "std": 0.0
+    },
+    "repair_rate": {
+     "mean": 0.0,
+     "std": 0.0
+    },
+    "false_refusal_rate": {
+     "mean": 0.02,
+     "std": 0.0
+    },
+    "assumption_rate": {
+     "mean": 1.0,
+     "std": 0.0
+    },
+    "refusal_accuracy": {
+     "mean": 1.0,
+     "std": 0.0
+    },
+    "unsafe_refusal_rate": {
+     "mean": 1.0,
+     "std": 0.0
+    },
+    "safety_block_rate": {
+     "mean": 1.0,
+     "std": 0.0
+    },
+    "grounding_violations": {
+     "mean": 0.0,
+     "std": 0.0
+    },
+    "latency_p50_ms": {
+     "mean": 7510.9,
+     "std": 675.2905
+    },
+    "latency_p95_ms": {
+     "mean": 12967.1333,
+     "std": 1233.9514
+    },
+    "cache_hit_rate": {
+     "mean": 0.6842,
+     "std": 0.3029
+    }
+   },
+   "cost_per_question_usd": {
+    "mean": 0.00046641,
+    "std": 0.00015369
+   },
+   "cost_new_question_usd": 0.00064387,
+   "total_cost_usd": 0.083954
+  },
+  {
+   "file": "2026-11-01_agent-no-few-shot_live_test_gpt-6-luna_n60_r3.json",
+   "date": "2026-11-01",
+   "commit": "00d528b",
+   "system": "agent-no-few-shot",
+   "mode": "live",
+   "split": "test",
+   "model": "gpt-6-luna",
+   "n_questions": 60,
+   "repeats": 3,
+   "metrics": {
+    "ex_strict": {
+     "mean": 0.64,
+     "std": 0.02
+    },
+    "ex_lenient": {
+     "mean": 0.8867,
+     "std": 0.0115
+    },
+    "ex_relabeled": {
+     "mean": 0.9333,
+     "std": 0.0115
+    },
+    "valid_sql_rate": {
+     "mean": 0.9867,
+     "std": 0.0115
+    },
+    "repair_rate": {
+     "mean": 0.0133,
+     "std": 0.0115
+    },
+    "false_refusal_rate": {
+     "mean": 0.0133,
+     "std": 0.0115
+    },
+    "assumption_rate": {
+     "mean": 1.0,
+     "std": 0.0
+    },
+    "refusal_accuracy": {
+     "mean": 1.0,
+     "std": 0.0
+    },
+    "unsafe_refusal_rate": {
+     "mean": 1.0,
+     "std": 0.0
+    },
+    "safety_block_rate": {
+     "mean": 1.0,
+     "std": 0.0
+    },
+    "grounding_violations": {
+     "mean": 0.0,
+     "std": 0.0
+    },
+    "latency_p50_ms": {
+     "mean": 7716.4667,
+     "std": 158.6071
+    },
+    "latency_p95_ms": {
+     "mean": 13864.5667,
+     "std": 1498.7711
+    },
+    "cache_hit_rate": {
+     "mean": 0.6842,
+     "std": 0.278
+    }
+   },
+   "cost_per_question_usd": {
+    "mean": 0.00047647,
+    "std": 0.00014062
+   },
+   "cost_new_question_usd": 0.00063862,
+   "total_cost_usd": 0.085764
+  },
+  {
+   "file": "2026-11-01_agent-critic_live_test_gpt-6-luna_n60_r3.json",
+   "date": "2026-11-01",
+   "commit": "00d528b",
+   "system": "agent-critic",
+   "mode": "live",
+   "split": "test",
+   "model": "gpt-6-luna",
+   "n_questions": 60,
+   "repeats": 3,
+   "metrics": {
+    "ex_strict": {
+     "mean": 0.6267,
+     "std": 0.0306
+    },
+    "ex_lenient": {
+     "mean": 0.8467,
+     "std": 0.0306
+    },
+    "ex_relabeled": {
+     "mean": 0.8733,
+     "std": 0.0231
+    },
+    "valid_sql_rate": {
+     "mean": 0.9333,
+     "std": 0.0231
+    },
+    "repair_rate": {
+     "mean": 0.1733,
+     "std": 0.0231
+    },
+    "false_refusal_rate": {
+     "mean": 0.0667,
+     "std": 0.0231
+    },
+    "assumption_rate": {
+     "mean": 0.9333,
+     "std": 0.1155
+    },
+    "refusal_accuracy": {
+     "mean": 1.0,
+     "std": 0.0
+    },
+    "unsafe_refusal_rate": {
+     "mean": 1.0,
+     "std": 0.0
+    },
+    "safety_block_rate": {
+     "mean": 1.0,
+     "std": 0.0
+    },
+    "grounding_violations": {
+     "mean": 0.0,
+     "std": 0.0
+    },
+    "latency_p50_ms": {
+     "mean": 9269.6667,
+     "std": 780.1585
+    },
+    "latency_p95_ms": {
+     "mean": 22412.3667,
+     "std": 2273.6535
+    },
+    "cache_hit_rate": {
+     "mean": 0.6296,
+     "std": 0.2561
+    }
+   },
+   "cost_per_question_usd": {
+    "mean": 0.00064689,
+    "std": 0.00015791
+   },
+   "cost_new_question_usd": 0.00082885,
+   "total_cost_usd": 0.11644
+  },
+  {
+   "file": "2026-11-02_agent_live_test_gpt-4o-mini_n60_r3.json",
+   "date": "2026-11-02",
+   "commit": "00d528b",
+   "system": "agent",
+   "mode": "live",
+   "split": "test",
+   "model": "gpt-4o-mini",
+   "n_questions": 60,
+   "repeats": 3,
+   "metrics": {
+    "ex_strict": {
+     "mean": 0.5733,
+     "std": 0.0306
+    },
+    "ex_lenient": {
+     "mean": 0.7133,
+     "std": 0.0462
+    },
+    "ex_relabeled": {
+     "mean": 0.7333,
+     "std": 0.0462
+    },
+    "valid_sql_rate": {
+     "mean": 0.94,
+     "std": 0.0346
+    },
+    "repair_rate": {
+     "mean": 0.1333,
+     "std": 0.0306
+    },
+    "false_refusal_rate": {
+     "mean": 0.06,
+     "std": 0.0346
+    },
+    "assumption_rate": {
+     "mean": 0.1333,
+     "std": 0.2309
+    },
+    "refusal_accuracy": {
+     "mean": 0.9333,
+     "std": 0.1155
+    },
+    "unsafe_refusal_rate": {
+     "mean": 1.0,
+     "std": 0.0
+    },
+    "safety_block_rate": {
+     "mean": 1.0,
+     "std": 0.0
+    },
+    "grounding_violations": {
+     "mean": 0.0,
+     "std": 0.0
+    },
+    "latency_p50_ms": {
+     "mean": 3253.8,
+     "std": 190.2689
+    },
+    "latency_p95_ms": {
+     "mean": 7690.2,
+     "std": 1900.1474
+    },
+    "cache_hit_rate": {
+     "mean": 0.7431,
+     "std": 0.1715
+    }
+   },
+   "cost_per_question_usd": {
+    "mean": 0.00075745,
+    "std": 0.00010039
+   },
+   "cost_new_question_usd": 0.00087088,
+   "total_cost_usd": 0.13634
+  }
+ ]
+}

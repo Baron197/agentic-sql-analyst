@@ -135,7 +135,7 @@ All commands run in the repo folder on the server. `.env` changes take effect wh
 |---|---|
 | Stop all model spending now (kill switch) | `LIVE_MODE_ENABLED=false` in `.env`, recreate `api`. Questions get 503; the rest of the site keeps working. |
 | Change the daily budget | `DAILY_BUDGET_USD=…` in `.env`, recreate `api`. Spend is counted per day in WIB from stored runs, so it survives restarts. |
-| See spend, error rate, latency | Sign in, then `GET /api/metrics` (or the History page). |
+| See spend, error rate, latency | Sign in, then open `/api/metrics` in the browser (JSON: runs, error rate, p50/p95 latency, cost today, cache use). |
 | Logs | `infra/compose.sh logs -f api` (JSON lines, no prompts or secrets) |
 | Deploy a new version | `git pull && infra/compose.sh build && infra/compose.sh up -d --wait` |
 | Reload the data | `infra/compose.sh run --rm seed` (keeps users and stored runs) |

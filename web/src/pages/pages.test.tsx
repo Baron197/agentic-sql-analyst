@@ -4,7 +4,9 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AuthProvider } from "../auth";
+import { AboutPage } from "./AboutPage";
 import { AskPage } from "./AskPage";
+import { EvaluationPage } from "./EvaluationPage";
 import { HistoryPage } from "./HistoryPage";
 import { LoginPage } from "./LoginPage";
 import { RecordedRunPage, RecordedRunsPage } from "./RecordedPage";
@@ -305,6 +307,82 @@ describe("HistoryPage", () => {
     );
     expect(screen.getByRole("link", { name: /Keyless one/ })).toHaveTextContent(
       "Keyless (no model)",
+    );
+  });
+});
+
+describe("Evaluation and About (public)", () => {
+  const stat = (mean: number, std = 0) => ({ mean, std });
+  const run = (system: string, exRelabeled: number, typed: number, file: string) => ({
+    file,
+    date: "2026-11-01",
+    commit: "00d528b",
+    system,
+    mode: "live",
+    split: "test",
+    model: "gpt-6-luna",
+    n_questions: 60,
+    repeats: 3,
+    metrics: {
+      ex_strict: stat(0.6867, 0.0306),
+      ex_lenient: stat(0.9133, 0.0231),
+      ex_relabeled: stat(exRelabeled, 0.0231),
+      valid_sql_rate: stat(0.9867, 0.0115),
+      false_refusal_rate: stat(0.0133, 0.0115),
+      unsafe_refusal_rate: stat(1),
+      safety_block_rate: stat(1),
+      grounding_violations: stat(typed, typed ? 1.2 : 0),
+      latency_p50_ms: stat(7296.97, 787.97),
+      latency_p95_ms: stat(14400, 800),
+    },
+    cost_per_question_usd: stat(0.000476, 0.000159),
+    cost_new_question_usd: 0.000659,
+    total_cost_usd: 0.0856,
+  });
+
+  it("shows the results from the summary, with each run linked to its result file", async () => {
+    const fetchMock = mockFetch({
+      "/api/eval-summary": () =>
+        json({
+          runs: [
+            run("agent", 0.9333, 0, "a_n60_r3.json"),
+            run("baseline", 0.9533, 48.3, "b_n60_r3.json"),
+          ],
+        }),
+    });
+    render(
+      <MemoryRouter>
+        <EvaluationPage />
+      </MemoryRouter>,
+    );
+    const findings = await screen.findByRole("region", { name: "What the numbers say" });
+    expect(findings).toHaveTextContent("the agent 93.3 ± 2.3%");
+    expect(findings).toHaveTextContent("baseline with the whole data dictionary 95.3 ± 2.3%");
+    expect(findings).toHaveTextContent("the agent 0, the baseline 48.3 ± 1.2");
+    expect(findings).toHaveTextContent("Every unsafe request was blocked in every run.");
+    expect(screen.getAllByRole("link", { name: "2026-11-01" })[0]).toHaveAttribute(
+      "href",
+      "https://github.com/Baron197/agentic-sql-analyst/blob/main/eval/results/a_n60_r3.json",
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1); // no sign-in needed
+  });
+
+  it("links the About page to the source code and the evaluation", () => {
+    render(
+      <MemoryRouter>
+        <AboutPage />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("link", { name: "Source code on GitHub" })).toHaveAttribute(
+      "href",
+      "https://github.com/Baron197/agentic-sql-analyst",
+    );
+    expect(screen.getAllByRole("link", { name: "Evaluation results" })[0]).toHaveAttribute(
+      "href",
+      "/evaluation",
+    );
+    expect(screen.getByRole("region", { name: "Using the demo" })).toHaveTextContent(
+      "Jabodetabek only",
     );
   });
 });

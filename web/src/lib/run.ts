@@ -44,12 +44,14 @@ export const MODE_TONE = (keyless: boolean) =>
 export function modeOf(h: Health): {
   tone: "live" | "off" | "keyless";
   label: string;
+  model: string | null; // shown next to the label on wide screens; always in the title
   title: string;
 } {
   if (h.mode === "keyless") {
     return {
       tone: "keyless",
       label: "Keyless mode",
+      model: null,
       title:
         "No model is called: a rule-based stand-in answers the demo questions. SQL, safety checks, and the database run for real.",
     };
@@ -57,13 +59,15 @@ export function modeOf(h: Health): {
   if (!h.live_mode_enabled) {
     return {
       tone: "off",
-      label: `Live off · ${h.model}`,
-      title: "Live mode is switched off: new questions are refused until it is back on.",
+      label: "Live off",
+      model: h.model,
+      title: `Live mode (${h.model}) is switched off: new questions are refused until it is back on.`,
     };
   }
   return {
     tone: "live",
-    label: `Live · ${h.model}`,
+    label: "Live",
+    model: h.model,
     title: `New questions are answered by ${h.model}, a paid model, within a daily budget.`,
   };
 }

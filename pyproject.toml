@@ -140,6 +140,10 @@ cmd = "python -m sql_analyst.recorded docs"
 help = "Smoke-test a deployed stack: --url https://HOST [--ask] [--expect-status 429|503] (--ask is paid in live mode)"
 cmd = "python infra/smoke_public.py"
 
+[tool.poe.tasks.eval-summary]
+help = "Write data/eval_summary.json (the web app's Evaluation page) from the committed test-split results"
+cmd = "python -m eval.summary"
+
 [tool.poe.tasks.eval]
 help = "Run the evaluation harness: --system gold|baseline --mode keyless|live --split dev|test (see eval/run_eval.py)"
 cmd = "python -m eval.run_eval"

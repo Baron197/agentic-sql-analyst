@@ -21,12 +21,13 @@ export function ModeBadge() {
       .catch(() => setHealth(null)); // the badge is informative only: hide it on failure
   }, []);
   if (!health) return null;
-  const { tone, label, title } = modeOf(health);
+  const { tone, label, model, title } = modeOf(health);
   return (
     <span className={`chip whitespace-nowrap font-mono ${TONE[tone]}`} title={title}>
       <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current" />
       <span className="sr-only">Mode: </span>
       {label}
+      {model && <span className="max-xl:sr-only">· {model}</span>}
     </span>
   );
 }

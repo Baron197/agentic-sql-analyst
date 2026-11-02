@@ -22,6 +22,28 @@ export interface Health {
   model: string;
 }
 
+// GET /api/eval-summary (public): the reported test-split runs (eval/summary.py, D050).
+export interface Stat {
+  mean: number | null;
+  std: number | null;
+}
+
+export interface EvalRun {
+  file: string;
+  date: string;
+  commit: string;
+  system: string;
+  mode: string;
+  split: string;
+  model: string;
+  n_questions: number;
+  repeats: number;
+  metrics: Record<string, Stat>;
+  cost_per_question_usd: Stat;
+  cost_new_question_usd: number;
+  total_cost_usd: number;
+}
+
 export type ChartType = "kpi" | "bar" | "line" | "table";
 
 export interface Chart {

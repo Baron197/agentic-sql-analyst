@@ -7,6 +7,7 @@ const NAV = [
   { to: "/", label: "Ask", end: true },
   { to: "/history", label: "History", end: false },
   { to: "/recorded", label: "Recorded runs", end: false },
+  { to: "/evaluation", label: "Evaluation", end: false },
   { to: "/dictionary", label: "Data dictionary", end: false },
   { to: "/about", label: "About", end: false },
 ];
@@ -72,31 +73,33 @@ export function Layout() {
               </NavLink>
             ))}
           </nav>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-3">
             <ModeBadge />
-          </div>
-          {user === null && (
-            <NavLink to="/login" className="btn-primary px-3 py-1.5 text-sm">
-              Sign in to ask
-            </NavLink>
-          )}
-          {user && (
-            <div className="flex items-center gap-3">
-              <span className="hidden text-right text-xs leading-tight sm:block">
-                <span className="block text-ink-soft">{user.user_id}</span>
-                <span className="text-ink-mute">
-                  {user.role === "manager" ? "Manager · Jabodetabek only" : "Analyst · all regions"}
+            {user === null && (
+              <NavLink to="/login" className="btn-primary px-3 py-1.5 text-sm">
+                Sign in to ask
+              </NavLink>
+            )}
+            {user && (
+              <>
+                <span className="hidden text-right text-xs leading-tight sm:block">
+                  <span className="block text-ink-soft">{user.user_id}</span>
+                  <span className="text-ink-mute">
+                    {user.role === "manager"
+                      ? "Manager · Jabodetabek only"
+                      : "Analyst · all regions"}
+                  </span>
                 </span>
-              </span>
-              <button
-                type="button"
-                className="btn-ghost px-3 py-1.5"
-                onClick={() => void signOut()}
-              >
-                Sign out
-              </button>
-            </div>
-          )}
+                <button
+                  type="button"
+                  className="btn-ghost px-3 py-1.5"
+                  onClick={() => void signOut()}
+                >
+                  Sign out
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </header>
       <main id="main" className="mx-auto w-full max-w-[1180px] flex-1 px-4 py-6 sm:px-6 sm:py-8">

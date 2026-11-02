@@ -103,3 +103,8 @@ def test_recorded_runs_are_public(client, tmp_path, monkeypatch):
     recorded.save(runs)
     body = client.get("/api/recorded-runs").json()  # not signed in
     assert [r["run_id"] for r in body["runs"]] == ["r1"] and "user_id" not in body["runs"][0]
+
+
+def test_eval_summary_is_public(client):
+    runs = client.get("/api/eval-summary").json()["runs"]  # not signed in
+    assert runs[0]["system"] == "agent" and runs[0]["file"].endswith("_n60_r3.json")

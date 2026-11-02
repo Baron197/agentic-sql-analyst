@@ -402,3 +402,13 @@ Short entries, newest last: context, decision, why, alternatives considered.
   - `GET /api/health` (public) also returns the model, and the header shows a badge: "Live · gpt-6-luna", "Live off · …" (kill switch), or "Keyless mode". Each History row shows its run's mode and model, and Run details has a Mode row.
 - **Why:** one serializer for rows avoids the next mismatch between paths. The model name isn't secret, and visitors should know whether they are reading a real model's answer.
 - **Alternatives:** coerce numeric strings in the chart (hides the bug: the table, `POST /api/ask`, and `--json` would still get strings); a float for every `Decimal` (whole numbers would show as `9285162700.0` in `--json`).
+
+## D050: Public Evaluation and About pages; live metrics stay private (2026-11-02, Phase 8)
+
+- **Context:** the evaluation, the project's strongest evidence, was only in `docs/EVAL_RESULTS.md` on GitHub. The About page needed a sign-in, didn't mention live mode, the limits, or the demo accounts, and had no links. The guide's page list (§11) has neither change.
+- **Decision:**
+  - `poe eval-summary` (`eval/summary.py`) writes `data/eval_summary.json` from the test-split result files in EVAL_RESULTS (7 runs: agent, baseline, three ablations, critic, `gpt-4o-mini`). A test fails if the committed file no longer matches the result files. The API serves it at the public `GET /api/eval-summary`;
+  - a public *Evaluation* page shows the findings, quality and speed/cost tables (mean ± std, each run linked to its result file on GitHub), and what each score means. The text around the numbers takes them from the data, and states the null and negative results and that differences under about 5 points are not meaningful;
+  - the About page is public and adds: using the demo (what to ask, the data window, the two accounts, live vs keyless, the limits, history), a short results summary linking to Evaluation, the stack, and links to the repo and docs.
+- **Why:** visitors and reviewers should see measured quality next to the demo, under the same rules as the docs. A committed summary is reviewable in git and can't drift from the result files.
+- **Alternatives:** read `eval/results/` at runtime (the folder isn't in the image, and the 7 files are about 2.4 MB with every case); a public live metrics page from `/api/metrics` (rejected: it would expose spend, and small live samples could be read as accuracy, so it stays signed-in, for the operator).

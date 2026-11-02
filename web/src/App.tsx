@@ -5,6 +5,7 @@ import { Layout } from "./components/Layout";
 import { AboutPage } from "./pages/AboutPage";
 import { AskPage } from "./pages/AskPage";
 import { DictionaryPage } from "./pages/DictionaryPage";
+import { EvaluationPage } from "./pages/EvaluationPage";
 import { HistoryPage, RunPage } from "./pages/HistoryPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RecordedRunPage, RecordedRunsPage } from "./pages/RecordedPage";
@@ -24,10 +25,12 @@ export function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      {/* Public: recorded live runs can be read without signing in (D048). */}
+      {/* Public: readable without signing in (recorded runs D048, evaluation and about D050). */}
       <Route element={<Layout />}>
         <Route path="recorded" element={<RecordedRunsPage />} />
         <Route path="recorded/:runId" element={<RecordedRunPage />} />
+        <Route path="evaluation" element={<EvaluationPage />} />
+        <Route path="about" element={<AboutPage />} />
       </Route>
       <Route
         element={
@@ -40,7 +43,6 @@ export function App() {
         <Route path="history" element={<HistoryPage />} />
         <Route path="history/:runId" element={<RunPage />} />
         <Route path="dictionary" element={<DictionaryPage />} />
-        <Route path="about" element={<AboutPage />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

@@ -5,12 +5,11 @@ import { api } from "../api/client";
 import type { RecordedRun } from "../api/types";
 import { RunResult } from "../components/RunResult";
 import { formatMs, formatUsd } from "../lib/format";
+import { repoFile } from "../lib/links";
 import { STATUS_TONE, fromRecord } from "../lib/run";
 
 // Public pages: real live-model runs recorded in the app and replayed from a file (D048).
 
-const EVAL_RESULTS =
-  "https://github.com/Baron197/agentic-sql-analyst/blob/main/docs/EVAL_RESULTS.md";
 const LANG_LABEL: Record<string, string> = { en: "English", id: "Bahasa Indonesia" };
 const ROLE_LABEL: Record<string, string> = {
   analyst: "analyst, all regions",
@@ -56,9 +55,13 @@ export function RecordedRunsPage() {
         <p className="max-w-[760px] text-sm text-ink-mute">
           Real answers from the agent with a live model, recorded in this app and replayed from a
           file: opening one makes no model call. They are hand-picked to show how the system
-          behaves, refusals included. Measured accuracy is in the{" "}
-          <a href={EVAL_RESULTS} className="text-accent hover:underline">
-            evaluation results
+          behaves, refusals included. Measured accuracy is on the{" "}
+          <Link to="/evaluation" className="text-accent hover:underline">
+            Evaluation
+          </Link>{" "}
+          page and in{" "}
+          <a href={repoFile("docs/EVAL_RESULTS.md")} className="text-accent hover:underline">
+            EVAL_RESULTS.md
           </a>
           .
         </p>

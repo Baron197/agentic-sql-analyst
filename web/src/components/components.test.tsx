@@ -166,14 +166,16 @@ describe("ModeBadge", () => {
   } as const;
 
   it("names the live model, says when live mode is off, and flags keyless mode", () => {
-    expect(modeOf(health)).toMatchObject({ tone: "live", label: "Live · gpt-6-luna" });
+    expect(modeOf(health)).toMatchObject({ tone: "live", label: "Live", model: "gpt-6-luna" });
     expect(modeOf({ ...health, live_mode_enabled: false })).toMatchObject({
       tone: "off",
-      label: "Live off · gpt-6-luna",
+      label: "Live off",
+      model: "gpt-6-luna",
     });
     expect(modeOf({ ...health, mode: "keyless", model: "fake-keyless" })).toMatchObject({
       tone: "keyless",
       label: "Keyless mode",
+      model: null,
     });
   });
 });
