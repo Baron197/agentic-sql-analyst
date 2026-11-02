@@ -95,6 +95,33 @@ def test_app_setup_is_idempotent_and_keeps_stored_runs(client):
     sign_in(client)  # passwords still work after re-hashing
 
 
+def test_app_setup_relabels_live_runs_stored_as_keyless():
+    # Before D051 a live run with no model call (refused by the rules) was stored as keyless.
+    admin = get_settings().admin_conninfo()
+    insert = (
+        "INSERT INTO app.runs (run_id, user_id, status, question, provider, model, keyless, "
+        "llm_calls, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, "
+        "cost_usd, elapsed_ms, record) VALUES (%s, 'analyst@demo', 'refused', 'q', %s, %s, "
+        'true, 0, 0, 0, 0, 0, 0, 1, \'{"usage": {"keyless": true}}\')'
+    )
+    ids = ("d051-live", "d051-fake")
+    with psycopg.connect(admin) as conn:
+        conn.execute(insert, (ids[0], "openai", "gpt-6-luna"))
+        conn.execute(insert, (ids[1], "fake", "fake-keyless"))
+    try:
+        setup_app(get_settings())
+        with psycopg.connect(admin) as conn:
+            rows = conn.execute(
+                "SELECT run_id, keyless, (record->'usage'->>'keyless')::boolean FROM app.runs "
+                "WHERE run_id = ANY(%s) ORDER BY run_id",
+                (list(ids),),
+            ).fetchall()
+        assert rows == [("d051-fake", True, True), ("d051-live", False, False)]
+    finally:
+        with psycopg.connect(admin) as conn:
+            conn.execute("DELETE FROM app.runs WHERE run_id = ANY(%s)", (list(ids),))
+
+
 def test_recorded_runs_are_public(client, tmp_path, monkeypatch):
     monkeypatch.setattr(recorded, "DATA_PATH", tmp_path / "recorded_runs.json")
     assert client.get("/api/recorded-runs").json() == {"runs": []}  # no file yet: empty

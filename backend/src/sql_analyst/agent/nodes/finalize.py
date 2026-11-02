@@ -110,6 +110,10 @@ def finalize(state: AgentState, deps: AgentDeps) -> dict[str, Any]:
     assumptions = [a for a in state.assumptions if not typed_numbers(a, grounded)]
 
     calls = state.llm_calls
+    usage = totals(calls)
+    # Keyless means the stand-in model answered. A live run that made no model call (refused
+    # by the rules) stays live: counting calls alone would label it keyless (D051).
+    usage.keyless = deps.llm.provider == "fake"
     result = AgentResult(
         run_id=state.run_id,
         created_at=datetime.now().astimezone().isoformat(timespec="seconds"),
@@ -140,7 +144,7 @@ def finalize(state: AgentState, deps: AgentDeps) -> dict[str, Any]:
         context=state.context,
         trace=state.trace,
         llm_calls=calls,
-        usage=totals(calls),
+        usage=usage,
         provider=deps.llm.provider,
         model=deps.llm.model,
         variant=deps.config.variant(),

@@ -412,3 +412,10 @@ Short entries, newest last: context, decision, why, alternatives considered.
   - the About page is public and adds: using the demo (what to ask, the data window, the two accounts, live vs keyless, the limits, history), a short results summary linking to Evaluation, the stack, and links to the repo and docs.
 - **Why:** visitors and reviewers should see measured quality next to the demo, under the same rules as the docs. A committed summary is reviewable in git and can't drift from the result files.
 - **Alternatives:** read `eval/results/` at runtime (the folder isn't in the image, and the 7 files are about 2.4 MB with every case); a public live metrics page from `/api/metrics` (rejected: it would expose spend, and small live samples could be read as accuracy, so it stays signed-in, for the operator).
+
+## D051: "Keyless" means the stand-in model, not "no model call" (2026-11-02, Phase 8)
+
+- **Context:** a run's `keyless` flag came from its model calls: true unless a paid call was made. A live run refused by the rule-based guard makes no call, so it was stored as keyless. History showed "Keyless (no model)" on a live stack, and `recorded` refused to publish these safety refusals.
+- **Decision:** finalize sets `keyless` from the agent's provider (`fake` only). History shows a live run with no model call as "Live · no model call", and Run details as "Live, no model call needed". `app-setup` fixes runs stored before this with an idempotent `UPDATE` (keyless only where the provider is `fake`).
+- **Why:** keyless runs are excluded from spend, publishing, and any quality claim because a script answered them. A rule-based refusal on a live stack is a real result of the live system.
+- **Alternatives:** keep the flag and add a separate "no call" label (two flags that mean almost the same thing); fix only the label in the web app (the stored flag would still block publishing).

@@ -88,7 +88,7 @@ class AppStore:
             return (
                 conn.cursor(row_factory=dict_row)
                 .execute(
-                    "SELECT run_id, created_at, status, question, model, keyless, cost_usd::float, "
+                    "SELECT run_id, created_at, status, question, model, keyless, llm_calls, cost_usd::float, "
                     "elapsed_ms FROM app.runs WHERE user_id = %s "
                     "AND (%s::text IS NULL OR session_id = %s) "
                     "ORDER BY created_at DESC LIMIT %s",

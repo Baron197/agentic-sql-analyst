@@ -115,6 +115,7 @@ export interface RunSummary {
   question: string;
   model: string;
   keyless: boolean;
+  llm_calls: number;
   cost_usd: number;
   elapsed_ms: number;
 }

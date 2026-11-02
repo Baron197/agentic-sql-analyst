@@ -53,7 +53,7 @@ export function HistoryPage() {
                 <span className="flex shrink-0 items-center gap-3 text-xs text-ink-mute">
                   <span className={STATUS_TONE[r.status]}>{r.status}</span>
                   <span className={`chip px-2 py-0 font-mono ${MODE_TONE(r.keyless)}`}>
-                    {runMode(r.keyless, r.model)}
+                    {runMode(r.keyless, r.model, r.llm_calls)}
                   </span>
                   <span>
                     {new Date(r.created_at).toLocaleString("en-GB", {

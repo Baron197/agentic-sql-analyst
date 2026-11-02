@@ -33,9 +33,11 @@ export const STATUS_TONE: Record<string, string> = {
   error: "text-danger",
 };
 
-/** How a run was answered: a live model (by name) or the keyless stand-in. */
-export const runMode = (keyless: boolean, model: string) =>
-  keyless ? "Keyless (no model)" : `Live · ${model}`;
+/** How a run was answered: a live model (by name), no call at all, or the keyless stand-in. */
+export function runMode(keyless: boolean, model: string, llmCalls: number): string {
+  if (keyless) return "Keyless (no model)";
+  return llmCalls === 0 ? "Live · no model call" : `Live · ${model}`;
+}
 
 export const MODE_TONE = (keyless: boolean) =>
   keyless ? "border-warn/40 text-warn" : "border-accent/40 text-accent-soft";

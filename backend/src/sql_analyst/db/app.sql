@@ -34,6 +34,10 @@ CREATE TABLE IF NOT EXISTS app.runs (
 -- A demo sign-in's browser session: its history shows only its own runs (D048). NULL for
 -- password sign-ins, which see all of the user's runs.
 ALTER TABLE app.runs ADD COLUMN IF NOT EXISTS session_id text;
+-- A live run refused by the rules makes no model call and used to be stored as keyless.
+-- Keyless means the stand-in model answered, so only the `fake` provider is keyless (D051).
+UPDATE app.runs SET keyless = false, record = jsonb_set(record, '{usage,keyless}', 'false')
+    WHERE keyless AND provider <> 'fake';
 CREATE INDEX IF NOT EXISTS runs_user_created ON app.runs (user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS runs_session_created ON app.runs (session_id, created_at DESC)
     WHERE session_id IS NOT NULL;

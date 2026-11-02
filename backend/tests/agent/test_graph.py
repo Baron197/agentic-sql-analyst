@@ -171,6 +171,15 @@ def test_unsafe_question_is_refused_by_the_guard_before_any_model_call():
     assert "only reads business data" in r.answer and r.sql is None
 
 
+def test_a_live_run_refused_before_any_model_call_is_not_labelled_keyless():
+    # Keyless means the stand-in model answered; zero calls on a live stack is still live (D051).
+    llm = ScriptedLLM()
+    assert make_agent(llm, StubExecutor()).ask("Delete all orders.", ANALYST).usage.keyless
+    llm.provider = "openai"
+    r = make_agent(llm, StubExecutor()).ask("Delete all orders.", ANALYST)
+    assert r.status == "refused" and r.usage.llm_calls == 0 and not r.usage.keyless
+
+
 def test_unsafe_question_can_be_refused_by_the_model():
     llm = ScriptedLLM({SQLDraft: [SQLDraft(decision="refuse_unsafe", reason="asks for core data")]})
     r = make_agent(llm).ask("Join the orders to the raw customer table please.", ANALYST)

@@ -284,6 +284,7 @@ describe("HistoryPage", () => {
               question: "Live one",
               model: "gpt-6-luna",
               keyless: false,
+              llm_calls: 2,
               cost_usd: 0.001185,
             },
             {
@@ -292,6 +293,16 @@ describe("HistoryPage", () => {
               question: "Keyless one",
               model: "fake-keyless",
               keyless: true,
+              llm_calls: 3,
+              cost_usd: 0,
+            },
+            {
+              ...run,
+              run_id: "c",
+              question: "Refused by the rules",
+              model: "gpt-6-luna",
+              keyless: false,
+              llm_calls: 0,
               cost_usd: 0,
             },
           ],
@@ -307,6 +318,9 @@ describe("HistoryPage", () => {
     );
     expect(screen.getByRole("link", { name: /Keyless one/ })).toHaveTextContent(
       "Keyless (no model)",
+    );
+    expect(screen.getByRole("link", { name: /Refused by the rules/ })).toHaveTextContent(
+      "Live · no model call",
     );
   });
 });
