@@ -105,12 +105,13 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      ENV_FILE: ${{ runner.temp }}/prod.env
     steps:
       - uses: actions/checkout@v7
+      # Set in a step: the runner context isn't available in a job's env block.
       - name: Throwaway keyless env file (random values, plain HTTP)
-        run: infra/make-env.sh :80 --keyless
+        run: |
+          echo "ENV_FILE=$RUNNER_TEMP/prod.env" >> "$GITHUB_ENV"
+          ENV_FILE="$RUNNER_TEMP/prod.env" infra/make-env.sh :80 --keyless
       - name: Build the images
         run: infra/compose.sh build
       - name: Seed (schemas, data, retrieval index, demo users)
