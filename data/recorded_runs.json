@@ -1,0 +1,602 @@
+{
+ "runs": [
+  {
+   "run_id": "95922487e19d4c20a6e1c82337f19ee3",
+   "created_at": "2026-11-02T07:22:28+00:00",
+   "question": "What was net revenue by sales channel in Q1 2026?",
+   "lang": "en",
+   "role": "analyst",
+   "status": "answered",
+   "answer": "Net revenue by sales channel for Q1 2026, interpreted as calendar Q1 rather than fiscal Q1, was IDR 3.88B for app, IDR 2.26B for marketplace, IDR 9.29B for store, and IDR 2.41B for website.",
+   "assumptions": [
+    "Interpreted “Q1 2026” as calendar Q1 (January–March 2026), not fiscal Q1."
+   ],
+   "caveats": [],
+   "sql": "WITH order_net AS (SELECT o.order_id, o.channel_id, SUM(oi.quantity * oi.unit_price_idr - oi.discount_idr) AS line_net FROM analytics.fact_orders AS o JOIN analytics.fact_order_items AS oi ON oi.order_id = o.order_id WHERE o.status <> 'cancelled' AND CAST((o.ordered_at AT TIME ZONE 'Asia/Jakarta') AS DATE) BETWEEN CAST('2026-01-01' AS DATE) AND CAST('2026-03-31' AS DATE) GROUP BY o.order_id, o.channel_id), refunds AS (SELECT r.order_id, SUM(r.refund_amount_idr) AS refunded FROM analytics.fact_returns AS r GROUP BY r.order_id) SELECT c.channel_code AS sales_channel, SUM(n.line_net - COALESCE(r.refunded, 0)) AS net_revenue_idr FROM order_net AS n JOIN analytics.dim_channel AS c ON c.channel_id = n.channel_id LEFT JOIN refunds AS r ON r.order_id = n.order_id GROUP BY c.channel_code ORDER BY c.channel_code",
+   "columns": [
+    "sales_channel",
+    "net_revenue_idr"
+   ],
+   "rows": [
+    [
+     "app",
+     3884159317
+    ],
+    [
+     "marketplace",
+     2255403200
+    ],
+    [
+     "store",
+     9285162700
+    ],
+    [
+     "website",
+     2412316400
+    ]
+   ],
+   "row_count": 4,
+   "truncated": false,
+   "chart": {
+    "type": "bar",
+    "x": "sales_channel",
+    "y": "net_revenue_idr"
+   },
+   "refusal": null,
+   "suggestions": [],
+   "repairs": 0,
+   "provider": "openai",
+   "model": "gpt-6-luna",
+   "trace": [
+    {
+     "node": "guard_input",
+     "ms": 0.0,
+     "note": null
+    },
+    {
+     "node": "retrieve_context",
+     "ms": 1649.5,
+     "note": "12 views, 0 values, 4 examples"
+    },
+    {
+     "node": "generate_sql",
+     "ms": 8509.6,
+     "note": "confidence medium"
+    },
+    {
+     "node": "validate_sql",
+     "ms": 8.3,
+     "note": "dim_channel, fact_order_items, fact_orders, fact_returns"
+    },
+    {
+     "node": "execute",
+     "ms": 77.0,
+     "note": "4 rows, cost 6,151"
+    },
+    {
+     "node": "check_result",
+     "ms": 0.1,
+     "note": "ok"
+    },
+    {
+     "node": "write_answer",
+     "ms": 4708.9,
+     "note": null
+    },
+    {
+     "node": "render_numbers",
+     "ms": 0.9,
+     "note": "grounded"
+    }
+   ],
+   "usage": {
+    "llm_calls": 2,
+    "input_tokens": 6,
+    "output_tokens": 902,
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 7333,
+    "cost_usd": 0.0011849,
+    "keyless": false
+   },
+   "elapsed_ms": 14973.5
+  },
+  {
+   "run_id": "618d1c8fa67a451d997006fb187690a2",
+   "created_at": "2026-11-02T09:10:32+00:00",
+   "question": "How many orders were placed in December 2026?",
+   "lang": "en",
+   "role": "analyst",
+   "status": "refused",
+   "answer": "I can't answer that from the available data.",
+   "assumptions": [],
+   "caveats": [],
+   "sql": null,
+   "columns": [],
+   "rows": [],
+   "row_count": 0,
+   "truncated": false,
+   "chart": null,
+   "refusal": {
+    "kind": "unanswerable",
+    "reason": "Order data covers 2024-01-01 through 2026-09-30, so it cannot answer how many orders were placed in December 2026.",
+    "source": "model"
+   },
+   "suggestions": [
+    "How many orders were placed in September 2026?",
+    "How many orders were placed in each month from January to September 2026?"
+   ],
+   "repairs": 0,
+   "provider": "openai",
+   "model": "gpt-6-luna",
+   "trace": [
+    {
+     "node": "guard_input",
+     "ms": 0.1,
+     "note": null
+    },
+    {
+     "node": "retrieve_context",
+     "ms": 1764.7,
+     "note": "10 views, 1 values, 4 examples"
+    },
+    {
+     "node": "generate_sql",
+     "ms": 4879.7,
+     "note": "refuse_unanswerable"
+    },
+    {
+     "node": "refuse",
+     "ms": 0.0,
+     "note": null
+    }
+   ],
+   "usage": {
+    "llm_calls": 1,
+    "input_tokens": 3,
+    "output_tokens": 200,
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 5910,
+    "cost_usd": 0.0006913,
+    "keyless": false
+   },
+   "elapsed_ms": 6651.4
+  },
+  {
+   "run_id": "6fc9aca60133400eb1500ad22c544f24",
+   "created_at": "2026-11-02T09:10:54+00:00",
+   "question": "How many orders were placed in September 2026?",
+   "lang": "en",
+   "role": "analyst",
+   "status": "answered",
+   "answer": "There were 2,110 orders placed in September 2026, including cancelled orders.",
+   "assumptions": [
+    "Counts all orders placed in September, including cancelled orders."
+   ],
+   "caveats": [],
+   "sql": "SELECT COUNT(*) AS orders FROM analytics.fact_orders AS o WHERE CAST((o.ordered_at AT TIME ZONE 'Asia/Jakarta') AS DATE) BETWEEN CAST('2026-09-01' AS DATE) AND CAST('2026-09-30' AS DATE)",
+   "columns": [
+    "orders"
+   ],
+   "rows": [
+    [
+     2110
+    ]
+   ],
+   "row_count": 1,
+   "truncated": false,
+   "chart": {
+    "type": "kpi",
+    "x": null,
+    "y": "orders"
+   },
+   "refusal": null,
+   "suggestions": [],
+   "repairs": 0,
+   "provider": "openai",
+   "model": "gpt-6-luna",
+   "trace": [
+    {
+     "node": "guard_input",
+     "ms": 0.1,
+     "note": null
+    },
+    {
+     "node": "retrieve_context",
+     "ms": 28.8,
+     "note": "8 views, 1 values, 4 examples"
+    },
+    {
+     "node": "generate_sql",
+     "ms": 2894.7,
+     "note": "confidence high"
+    },
+    {
+     "node": "validate_sql",
+     "ms": 3.7,
+     "note": "fact_orders"
+    },
+    {
+     "node": "execute",
+     "ms": 63.1,
+     "note": "1 rows, cost 2,452"
+    },
+    {
+     "node": "check_result",
+     "ms": 0.1,
+     "note": "ok"
+    },
+    {
+     "node": "write_answer",
+     "ms": 2462.7,
+     "note": null
+    },
+    {
+     "node": "render_numbers",
+     "ms": 0.9,
+     "note": "grounded"
+    }
+   ],
+   "usage": {
+    "llm_calls": 2,
+    "input_tokens": 817,
+    "output_tokens": 294,
+    "cache_read_tokens": 2032,
+    "cache_write_tokens": 3332,
+    "cost_usd": 0.00058222,
+    "keyless": false
+   },
+   "elapsed_ms": 5466.8
+  },
+  {
+   "run_id": "06d0d4dc1b2c46149847aa41ceb02690",
+   "created_at": "2026-11-02T09:14:37+00:00",
+   "question": "Berapa pelanggan baru yang mendaftar setiap bulan selama 2025?",
+   "lang": "id",
+   "role": "analyst",
+   "status": "answered",
+   "answer": "Jumlah pelanggan baru tercatat sebanyak 429 pada 2025-01-01, 388 pada 2025-02-01, dan 446 pada 2025-03-01. Rincian untuk bulan lainnya tersedia pada tabel.",
+   "assumptions": [],
+   "caveats": [],
+   "sql": "WITH months AS (SELECT DISTINCT CAST(DATE_TRUNC('MONTH', d.date_key) AS DATE) AS month_start FROM analytics.dim_date AS d WHERE d.date_key >= CAST('2025-01-01' AS DATE) AND d.date_key < CAST('2026-01-01' AS DATE)) SELECT m.month_start, COUNT(c.customer_id) AS new_customers FROM months AS m LEFT JOIN analytics.dim_customer AS c ON c.signup_date >= m.month_start AND c.signup_date < CAST((m.month_start + INTERVAL '1 MONTH') AS DATE) GROUP BY m.month_start ORDER BY m.month_start",
+   "columns": [
+    "month_start",
+    "new_customers"
+   ],
+   "rows": [
+    [
+     "2025-01-01",
+     429
+    ],
+    [
+     "2025-02-01",
+     388
+    ],
+    [
+     "2025-03-01",
+     446
+    ],
+    [
+     "2025-04-01",
+     460
+    ],
+    [
+     "2025-05-01",
+     451
+    ],
+    [
+     "2025-06-01",
+     456
+    ],
+    [
+     "2025-07-01",
+     462
+    ],
+    [
+     "2025-08-01",
+     485
+    ],
+    [
+     "2025-09-01",
+     495
+    ],
+    [
+     "2025-10-01",
+     516
+    ],
+    [
+     "2025-11-01",
+     448
+    ],
+    [
+     "2025-12-01",
+     464
+    ]
+   ],
+   "row_count": 12,
+   "truncated": false,
+   "chart": {
+    "type": "line",
+    "x": "month_start",
+    "y": "new_customers"
+   },
+   "refusal": null,
+   "suggestions": [],
+   "repairs": 0,
+   "provider": "openai",
+   "model": "gpt-6-luna",
+   "trace": [
+    {
+     "node": "guard_input",
+     "ms": 0.0,
+     "note": null
+    },
+    {
+     "node": "retrieve_context",
+     "ms": 21.6,
+     "note": "11 views, 0 values, 4 examples"
+    },
+    {
+     "node": "generate_sql",
+     "ms": 7246.5,
+     "note": "confidence high"
+    },
+    {
+     "node": "validate_sql",
+     "ms": 5.8,
+     "note": "dim_customer, dim_date"
+    },
+    {
+     "node": "execute",
+     "ms": 191.9,
+     "note": "12 rows, cost 127,320"
+    },
+    {
+     "node": "check_result",
+     "ms": 0.1,
+     "note": "ok"
+    },
+    {
+     "node": "write_answer",
+     "ms": 6881.1,
+     "note": null
+    },
+    {
+     "node": "render_numbers",
+     "ms": 0.2,
+     "note": "grounded"
+    }
+   ],
+   "usage": {
+    "llm_calls": 2,
+    "input_tokens": 6,
+    "output_tokens": 858,
+    "cache_read_tokens": 2032,
+    "cache_write_tokens": 5029,
+    "cost_usd": 0.00095282,
+    "keyless": false
+   },
+   "elapsed_ms": 14362.1
+  },
+  {
+   "run_id": "611c35bf725746da94bcbf97c595ca4f",
+   "created_at": "2026-11-02T09:15:35+00:00",
+   "question": "How many orders were placed each month in 2025?",
+   "lang": "en",
+   "role": "analyst",
+   "status": "answered",
+   "answer": "Orders by month, including cancelled orders: 2025-01-01 — 1,640; 2025-02-01 — 1,515; 2025-03-01 — 2,491; 2025-04-01 — 1,611; 2025-05-01 — 1,793; 2025-06-01 — 1,706; 2025-07-01 — 1,729; 2025-08-01 — 1,830; 2025-09-01 — 1,869; 2025-10-01 — 1,843; 2025-11-01 — 1,995; and 2025-12-01 — 2,148.",
+   "assumptions": [
+    "Counts all orders placed, including cancelled orders."
+   ],
+   "caveats": [],
+   "sql": "SELECT CAST(DATE_TRUNC('MONTH', o.ordered_at AT TIME ZONE 'Asia/Jakarta') AS DATE) AS month_start, COUNT(*) AS orders FROM analytics.fact_orders AS o WHERE CAST((o.ordered_at AT TIME ZONE 'Asia/Jakarta') AS DATE) >= CAST('2025-01-01' AS DATE) AND CAST((o.ordered_at AT TIME ZONE 'Asia/Jakarta') AS DATE) < CAST('2026-01-01' AS DATE) GROUP BY 1 ORDER BY 1",
+   "columns": [
+    "month_start",
+    "orders"
+   ],
+   "rows": [
+    [
+     "2025-01-01",
+     1640
+    ],
+    [
+     "2025-02-01",
+     1515
+    ],
+    [
+     "2025-03-01",
+     2491
+    ],
+    [
+     "2025-04-01",
+     1611
+    ],
+    [
+     "2025-05-01",
+     1793
+    ],
+    [
+     "2025-06-01",
+     1706
+    ],
+    [
+     "2025-07-01",
+     1729
+    ],
+    [
+     "2025-08-01",
+     1830
+    ],
+    [
+     "2025-09-01",
+     1869
+    ],
+    [
+     "2025-10-01",
+     1843
+    ],
+    [
+     "2025-11-01",
+     1995
+    ],
+    [
+     "2025-12-01",
+     2148
+    ]
+   ],
+   "row_count": 12,
+   "truncated": false,
+   "chart": {
+    "type": "line",
+    "x": "month_start",
+    "y": "orders"
+   },
+   "refusal": null,
+   "suggestions": [],
+   "repairs": 0,
+   "provider": "openai",
+   "model": "gpt-6-luna",
+   "trace": [
+    {
+     "node": "guard_input",
+     "ms": 0.0,
+     "note": null
+    },
+    {
+     "node": "retrieve_context",
+     "ms": 20.3,
+     "note": "9 views, 0 values, 4 examples"
+    },
+    {
+     "node": "generate_sql",
+     "ms": 4369.5,
+     "note": "confidence high"
+    },
+    {
+     "node": "validate_sql",
+     "ms": 4.2,
+     "note": "fact_orders"
+    },
+    {
+     "node": "execute",
+     "ms": 30.7,
+     "note": "12 rows, cost 2,467"
+    },
+    {
+     "node": "check_result",
+     "ms": 0.1,
+     "note": "ok"
+    },
+    {
+     "node": "write_answer",
+     "ms": 3832.6,
+     "note": null
+    },
+    {
+     "node": "render_numbers",
+     "ms": 0.5,
+     "note": "grounded"
+    }
+   ],
+   "usage": {
+    "llm_calls": 2,
+    "input_tokens": 6,
+    "output_tokens": 629,
+    "cache_read_tokens": 2032,
+    "cache_write_tokens": 4554,
+    "cost_usd": 0.00079082,
+    "keyless": false
+   },
+   "elapsed_ms": 8270.7
+  },
+  {
+   "run_id": "cf9813b06f5247f3b0f1b5c3ce5e8670",
+   "created_at": "2026-11-02T09:16:30+00:00",
+   "question": "Metode pembayaran apa yang paling sering dipakai pada tahun 2026?",
+   "lang": "id",
+   "role": "analyst",
+   "status": "answered",
+   "answer": "Metode pembayaran yang paling sering digunakan adalah ewallet, dengan 4.994 pesanan. Perhitungan mencakup periode yang tersedia dan pesanan yang dibatalkan.",
+   "assumptions": [
+    "Tahun 2026 dihitung untuk periode yang tersedia, yaitu 1 Januari–30 September 2026.",
+    "Frekuensi dihitung sebagai jumlah pesanan dengan catatan pembayaran untuk setiap metode, termasuk pesanan yang dibatalkan."
+   ],
+   "caveats": [],
+   "sql": "SELECT p.payment_method AS payment_method, COUNT(*) AS orders FROM analytics.fact_payments AS p JOIN analytics.fact_orders AS o ON o.order_id = p.order_id WHERE CAST((o.ordered_at AT TIME ZONE 'Asia/Jakarta') AS DATE) BETWEEN CAST('2026-01-01' AS DATE) AND CAST('2026-09-30' AS DATE) GROUP BY p.payment_method ORDER BY orders DESC LIMIT 1",
+   "columns": [
+    "payment_method",
+    "orders"
+   ],
+   "rows": [
+    [
+     "ewallet",
+     4994
+    ]
+   ],
+   "row_count": 1,
+   "truncated": false,
+   "chart": {
+    "type": "bar",
+    "x": "payment_method",
+    "y": "orders"
+   },
+   "refusal": null,
+   "suggestions": [],
+   "repairs": 0,
+   "provider": "openai",
+   "model": "gpt-6-luna",
+   "trace": [
+    {
+     "node": "guard_input",
+     "ms": 0.0,
+     "note": null
+    },
+    {
+     "node": "retrieve_context",
+     "ms": 32.7,
+     "note": "9 views, 0 values, 4 examples"
+    },
+    {
+     "node": "generate_sql",
+     "ms": 7257.9,
+     "note": "confidence medium"
+    },
+    {
+     "node": "validate_sql",
+     "ms": 3.8,
+     "note": "fact_orders, fact_payments"
+    },
+    {
+     "node": "execute",
+     "ms": 48.5,
+     "note": "1 rows, cost 3,859"
+    },
+    {
+     "node": "check_result",
+     "ms": 0.1,
+     "note": "ok"
+    },
+    {
+     "node": "write_answer",
+     "ms": 3821.8,
+     "note": null
+    },
+    {
+     "node": "render_numbers",
+     "ms": 0.1,
+     "note": "grounded"
+    }
+   ],
+   "usage": {
+    "llm_calls": 2,
+    "input_tokens": 905,
+    "output_tokens": 820,
+    "cache_read_tokens": 2032,
+    "cache_write_tokens": 3520,
+    "cost_usd": 0.00087282,
+    "keyless": false
+   },
+   "elapsed_ms": 11176.6
+  }
+ ]
+}

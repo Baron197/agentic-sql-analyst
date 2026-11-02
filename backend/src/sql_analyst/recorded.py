@@ -187,7 +187,8 @@ def render_markdown(recorded: RecordedRuns) -> str:
             f"## {i}. {r.question}",
             "",
             f"Recorded {r.created_at[:10]} · signed in as {ROLES.get(r.role, r.role)} · "
-            f"{LANGS.get(r.lang, r.lang)} · `{r.model}` · {u.llm_calls} model calls · "
+            f"{LANGS.get(r.lang, r.lang)} · `{r.model}` · {u.llm_calls} model "
+            f"call{'' if u.llm_calls == 1 else 's'} · "
             f"{u.input_tokens + u.cache_read_tokens + u.cache_write_tokens:,} input / "
             f"{u.output_tokens:,} output tokens · {_seconds(r.elapsed_ms)} · ${u.cost_usd:.6f}",
             "",
@@ -204,7 +205,7 @@ def render_markdown(recorded: RecordedRuns) -> str:
             out += ["```sql", r.sql.strip(), "```", ""]
         if r.columns:
             shown = r.rows[:DOC_ROWS]
-            out += [f"Result: {len(shown)} of {r.row_count:,} rows.", "", _table(r.columns, shown)]
+            out += [f"Showing {len(shown)} of {r.row_count:,} rows.", "", _table(r.columns, shown)]
         if r.repairs:
             out += ["", f"The SQL was repaired {r.repairs} time(s) before it ran."]
     return "\n".join(out).rstrip() + "\n"

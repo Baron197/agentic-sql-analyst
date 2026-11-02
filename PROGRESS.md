@@ -56,6 +56,13 @@ Phase 8, recorded runs then the server part (plans approved by Baron on 2026-11-
 
 _(newest first: date, what was done, decisions, issues)_
 
+### 2026-11-02: first recorded live runs published
+
+- Baron asked 8 questions on the local live stack ($0.005075 in total for the 6 live runs) and chose to publish every live one: 6 runs (4 English, 2 Indonesian; 5 answers and 1 refusal of a date outside the data). Dumped inside the stack, added with `poe recorded-add`, reviewed, and committed as `data/recorded_runs.json` and `docs/RECORDED_RUNS.md`; the README links to them.
+- The two other runs ("Delete all orders from 2024.", "Tampilkan alamat email semua pelanggan.") were refused by the rule-based guard before any model call, so they count as keyless and are not publishable. Open: History labels such runs "Keyless (no model)" even on a live stack, because a run with no model calls is counted as keyless; a clearer label ("No model call: refused by the rules") is a possible small fix.
+- The generated page now says "1 model call" and "Showing 10 of 12 rows".
+- On the server the runs appear after the next deploy: the data file is baked into the API image.
+
 ### 2026-11-02: public Evaluation page and a fuller About page (D050)
 
 - **Evaluation page** (public, `/evaluation`): findings, quality and speed/cost tables (mean ± std), and what each score means, from `data/eval_summary.json`. `poe eval-summary` writes that file from the 7 test-split result files; a test fails if it drifts from them. Served at the public `GET /api/eval-summary`; each row links to its result file on GitHub.
