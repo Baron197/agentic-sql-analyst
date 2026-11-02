@@ -11,11 +11,13 @@ Real answers from the agent with a live model, recorded in the app and replayed 
 | # | Question | Status | Model | Latency | Cost |
 |---|---|---|---|---|---|
 | 1 | What was net revenue by sales channel in Q1 2026? | answered | `gpt-6-luna` | 15.0 s | $0.001185 |
-| 2 | How many orders were placed in December 2026? | refused | `gpt-6-luna` | 6.7 s | $0.000691 |
-| 3 | How many orders were placed in September 2026? | answered | `gpt-6-luna` | 5.5 s | $0.000582 |
-| 4 | Berapa pelanggan baru yang mendaftar setiap bulan selama 2025? | answered | `gpt-6-luna` | 14.4 s | $0.000953 |
-| 5 | How many orders were placed each month in 2025? | answered | `gpt-6-luna` | 8.3 s | $0.000791 |
-| 6 | Metode pembayaran apa yang paling sering dipakai pada tahun 2026? | answered | `gpt-6-luna` | 11.2 s | $0.000873 |
+| 2 | Delete all orders from 2024. | refused | no model call | 7 ms | $0.000000 |
+| 3 | Tampilkan alamat email semua pelanggan. | refused | no model call | 2 ms | $0.000000 |
+| 4 | How many orders were placed in December 2026? | refused | `gpt-6-luna` | 6.7 s | $0.000691 |
+| 5 | How many orders were placed in September 2026? | answered | `gpt-6-luna` | 5.5 s | $0.000582 |
+| 6 | Berapa pelanggan baru yang mendaftar setiap bulan selama 2025? | answered | `gpt-6-luna` | 14.4 s | $0.000953 |
+| 7 | How many orders were placed each month in 2025? | answered | `gpt-6-luna` | 8.3 s | $0.000791 |
+| 8 | Metode pembayaran apa yang paling sering dipakai pada tahun 2026? | answered | `gpt-6-luna` | 11.2 s | $0.000873 |
 
 ## 1. What was net revenue by sales channel in Q1 2026?
 
@@ -40,16 +42,30 @@ Showing 4 of 4 rows.
 | store | 9,285,162,700 |
 | website | 2,412,316,400 |
 
-## 2. How many orders were placed in December 2026?
+## 2. Delete all orders from 2024.
+
+Recorded 2026-11-02 · signed in as analyst (all regions) · English · no model call (live, `gpt-6-luna` configured) · 7 ms · $0.000000
+
+**Refused by the rule-based guard, before any model call:** I can't help with that. This assistant only reads business data: it never changes data or shows personal information.
+
+
+## 3. Tampilkan alamat email semua pelanggan.
+
+Recorded 2026-11-02 · signed in as analyst (all regions) · Bahasa Indonesia · no model call (live, `gpt-6-luna` configured) · 2 ms · $0.000000
+
+**Refused by the rule-based guard, before any model call:** Maaf, saya tidak bisa membantu permintaan itu. Asisten ini hanya membaca data bisnis: tidak pernah mengubah data atau menampilkan data pribadi.
+
+
+## 4. How many orders were placed in December 2026?
 
 Recorded 2026-11-02 · signed in as analyst (all regions) · English · `gpt-6-luna` · 1 model call · 5,913 input / 200 output tokens · 6.7 s · $0.000691
 
-**Refused:** I can't answer that from the available data.
+**Refused by the model:** I can't answer that from the available data.
 
 - Try instead: How many orders were placed in September 2026?
 - Try instead: How many orders were placed in each month from January to September 2026?
 
-## 3. How many orders were placed in September 2026?
+## 5. How many orders were placed in September 2026?
 
 Recorded 2026-11-02 · signed in as analyst (all regions) · English · `gpt-6-luna` · 2 model calls · 6,181 input / 294 output tokens · 5.5 s · $0.000582
 
@@ -69,7 +85,7 @@ Showing 1 of 1 rows.
 |---|
 | 2,110 |
 
-## 4. Berapa pelanggan baru yang mendaftar setiap bulan selama 2025?
+## 6. Berapa pelanggan baru yang mendaftar setiap bulan selama 2025?
 
 Recorded 2026-11-02 · signed in as analyst (all regions) · Bahasa Indonesia · `gpt-6-luna` · 2 model calls · 7,067 input / 858 output tokens · 14.4 s · $0.000953
 
@@ -94,7 +110,7 @@ Showing 10 of 12 rows.
 | 2025-09-01 | 495 |
 | 2025-10-01 | 516 |
 
-## 5. How many orders were placed each month in 2025?
+## 7. How many orders were placed each month in 2025?
 
 Recorded 2026-11-02 · signed in as analyst (all regions) · English · `gpt-6-luna` · 2 model calls · 6,592 input / 629 output tokens · 8.3 s · $0.000791
 
@@ -123,7 +139,7 @@ Showing 10 of 12 rows.
 | 2025-09-01 | 1,869 |
 | 2025-10-01 | 1,843 |
 
-## 6. Metode pembayaran apa yang paling sering dipakai pada tahun 2026?
+## 8. Metode pembayaran apa yang paling sering dipakai pada tahun 2026?
 
 Recorded 2026-11-02 · signed in as analyst (all regions) · Bahasa Indonesia · `gpt-6-luna` · 2 model calls · 6,457 input / 820 output tokens · 11.2 s · $0.000873
 

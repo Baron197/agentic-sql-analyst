@@ -150,7 +150,12 @@ def _table(columns: list[str], rows: list[list[Any]]) -> str:
 
 
 def _seconds(ms: float) -> str:
-    return f"{ms / 1000:.1f} s"
+    return f"{ms / 1000:.1f} s" if ms >= 1000 else f"{ms:.0f} ms"
+
+
+def _model(r: RecordedRun) -> str:
+    """The model, or why none was called (a live run the rule-based guard refused, D051)."""
+    return f"`{r.model}`" if r.usage.llm_calls else "no model call"
 
 
 def render_markdown(recorded: RecordedRuns) -> str:
@@ -177,24 +182,34 @@ def render_markdown(recorded: RecordedRuns) -> str:
     out += ["| # | Question | Status | Model | Latency | Cost |", "|---|---|---|---|---|---|"]
     for i, r in enumerate(recorded.runs, 1):
         out.append(
-            f"| {i} | {_cell(r.question)} | {r.status} | `{r.model}` | "
+            f"| {i} | {_cell(r.question)} | {r.status} | {_model(r)} | "
             f"{_seconds(r.elapsed_ms)} | ${r.usage.cost_usd:.6f} |"
         )
     for i, r in enumerate(recorded.runs, 1):
         u = r.usage
+        calls = (
+            f"`{r.model}` · {u.llm_calls} model call{'' if u.llm_calls == 1 else 's'} · "
+            f"{u.input_tokens + u.cache_read_tokens + u.cache_write_tokens:,} input / "
+            f"{u.output_tokens:,} output tokens"
+            if u.llm_calls
+            else f"no model call (live, `{r.model}` configured)"
+        )
         out += [
             "",
             f"## {i}. {r.question}",
             "",
             f"Recorded {r.created_at[:10]} · signed in as {ROLES.get(r.role, r.role)} · "
-            f"{LANGS.get(r.lang, r.lang)} · `{r.model}` · {u.llm_calls} model "
-            f"call{'' if u.llm_calls == 1 else 's'} · "
-            f"{u.input_tokens + u.cache_read_tokens + u.cache_write_tokens:,} input / "
-            f"{u.output_tokens:,} output tokens · {_seconds(r.elapsed_ms)} · ${u.cost_usd:.6f}",
+            f"{LANGS.get(r.lang, r.lang)} · {calls} · {_seconds(r.elapsed_ms)} · "
+            f"${u.cost_usd:.6f}",
             "",
         ]
         if r.status == "refused" and r.refusal:
-            out += [f"**Refused:** {r.answer or r.refusal.reason}", ""]
+            by = (
+                "by the rule-based guard, before any model call"
+                if r.refusal.source == "guard"
+                else "by the model"
+            )
+            out += [f"**Refused {by}:** {r.answer or r.refusal.reason}", ""]
             out += [f"- Try instead: {s}" for s in r.suggestions]
         elif r.answer:
             out += [f"**Answer ({r.status}):** {r.answer}", ""]

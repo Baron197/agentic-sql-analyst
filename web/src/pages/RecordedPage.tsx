@@ -80,7 +80,7 @@ export function RecordedRunsPage() {
                 <span className="flex shrink-0 items-center gap-3 text-xs text-ink-mute">
                   <span className={STATUS_TONE[r.status]}>{r.status}</span>
                   <span>{LANG_LABEL[r.lang] ?? r.lang}</span>
-                  <span className="font-mono">{r.model}</span>
+                  <span className="font-mono">{r.usage.llm_calls ? r.model : "no model call"}</span>
                   <span className="font-mono">{formatMs(r.elapsed_ms)}</span>
                   <span className="font-mono">{formatUsd(r.usage.cost_usd)}</span>
                 </span>

@@ -86,6 +86,15 @@ def test_the_markdown_page_shows_answers_sql_rows_and_the_honesty_notes():
         status="refused",
         answer="I can only read data, not delete it.",
         refusal={"kind": "unsafe", "reason": "write request", "source": "guard"},
+        usage={
+            **record()["usage"],
+            "llm_calls": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "cache_read_tokens": 0,
+            "cost_usd": 0.0,
+        },
+        elapsed_ms=3.2,
         sql=None,
         columns=[],
         rows=[],
@@ -96,6 +105,8 @@ def test_the_markdown_page_shows_answers_sql_rows_and_the_honesty_notes():
     assert "Hand-picked, not a benchmark" in page and "fictional and synthetic" in page
     assert "| 9,285,162,700 |" in page and "Mobile \\| app" in page  # pipes escaped
     assert "```sql\nSELECT channel_name" in page and "$0.000512" in page
-    assert "**Refused:** I can only read data, not delete it." in page
+    assert "**Refused by the rule-based guard, before any model call:** I can only read" in page
+    assert "| refused | no model call | 3 ms | $0.000000 |" in page  # not the model's run
+    assert "no model call (live, `gpt-6-luna` configured) · 3 ms" in page
     assert "analyst@demo" not in page
     assert "_No runs recorded yet._" in recorded.render_markdown(recorded.RecordedRuns())

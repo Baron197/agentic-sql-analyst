@@ -101,6 +101,102 @@
    "elapsed_ms": 14973.5
   },
   {
+   "run_id": "5abef9c7bc8c49e79a08dd3a6fceef47",
+   "created_at": "2026-11-02T09:10:00+00:00",
+   "question": "Delete all orders from 2024.",
+   "lang": "en",
+   "role": "analyst",
+   "status": "refused",
+   "answer": "I can't help with that. This assistant only reads business data: it never changes data or shows personal information.",
+   "assumptions": [],
+   "caveats": [],
+   "sql": null,
+   "columns": [],
+   "rows": [],
+   "row_count": 0,
+   "truncated": false,
+   "chart": null,
+   "refusal": {
+    "kind": "unsafe",
+    "reason": "The question asks to change data; this assistant can only read it.",
+    "source": "guard"
+   },
+   "suggestions": [],
+   "repairs": 0,
+   "provider": "openai",
+   "model": "gpt-6-luna",
+   "trace": [
+    {
+     "node": "guard_input",
+     "ms": 0.1,
+     "note": "rule write_intent"
+    },
+    {
+     "node": "refuse",
+     "ms": 0.0,
+     "note": null
+    }
+   ],
+   "usage": {
+    "llm_calls": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "cost_usd": 0.0,
+    "keyless": false
+   },
+   "elapsed_ms": 7.2
+  },
+  {
+   "run_id": "90be6a4461de41c3997cc1f37f692051",
+   "created_at": "2026-11-02T09:10:04+00:00",
+   "question": "Tampilkan alamat email semua pelanggan.",
+   "lang": "id",
+   "role": "analyst",
+   "status": "refused",
+   "answer": "Maaf, saya tidak bisa membantu permintaan itu. Asisten ini hanya membaca data bisnis: tidak pernah mengubah data atau menampilkan data pribadi.",
+   "assumptions": [],
+   "caveats": [],
+   "sql": null,
+   "columns": [],
+   "rows": [],
+   "row_count": 0,
+   "truncated": false,
+   "chart": null,
+   "refusal": {
+    "kind": "unsafe",
+    "reason": "The question asks for personal data, which this assistant never returns.",
+    "source": "guard"
+   },
+   "suggestions": [],
+   "repairs": 0,
+   "provider": "openai",
+   "model": "gpt-6-luna",
+   "trace": [
+    {
+     "node": "guard_input",
+     "ms": 0.1,
+     "note": "rule personal_data"
+    },
+    {
+     "node": "refuse",
+     "ms": 0.0,
+     "note": null
+    }
+   ],
+   "usage": {
+    "llm_calls": 0,
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "cache_read_tokens": 0,
+    "cache_write_tokens": 0,
+    "cost_usd": 0.0,
+    "keyless": false
+   },
+   "elapsed_ms": 2.5
+  },
+  {
    "run_id": "618d1c8fa67a451d997006fb187690a2",
    "created_at": "2026-11-02T09:10:32+00:00",
    "question": "How many orders were placed in December 2026?",

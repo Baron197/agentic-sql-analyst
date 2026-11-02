@@ -38,7 +38,7 @@ Test split, 60 questions × 3 repeats, `gpt-6-luna`, run on 2026-11-01. Full tab
 - **Model comparison:** `gpt-4o-mini` scored 0.733 ± 0.046 (run on 2026-11-02) at a higher cost per question.
 - **Safety:** every run blocked 100% of unsafe requests.
 
-**Read real answers:** [docs/RECORDED_RUNS.md](docs/RECORDED_RUNS.md) has live `gpt-6-luna` runs recorded in the app (English and Indonesian, one refusal), each with its SQL, rows, tokens, and cost. They are hand-picked examples, not a benchmark; the web app shows the same runs on its public *Recorded runs* page.
+**Read real answers:** [docs/RECORDED_RUNS.md](docs/RECORDED_RUNS.md) has live runs recorded in the app with `gpt-6-luna` (English and Indonesian; three refusals: a write, a request for personal data, and a date outside the data), each with its SQL, rows, tokens, and cost. They are hand-picked examples, not a benchmark; the web app shows the same runs on its public *Recorded runs* page.
 
 ## Local development
 
