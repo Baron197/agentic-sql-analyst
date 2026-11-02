@@ -365,3 +365,21 @@ Short entries, newest last: context, decision, why, alternatives considered.
 - **Decision:** `gracefulShutdown: { signal: "SIGTERM" }` for both web servers in `web/playwright.config.ts`. poe catches SIGTERM and stops its child. Also a Playwright `globalTimeout` of 10 minutes, and `timeout-minutes` on both CI jobs and the smoke step.
 - **Why:** it keeps `poe api` as the one way to start the API. Verified in the Linux Playwright image: before, the test passed and the run hung; after, it passed and exited in 7 s.
 - **Alternatives:** call `uv run uvicorn …` directly in the Playwright config (works, but duplicates the poe task's command); a CI-only kill step after the test (treats the symptom).
+
+## D046: The production stack: Caddy in the web image, one origin, images built on the server (2026-11-02, Phase 8)
+
+- **Decision:**
+  - three long-running services in `infra/docker-compose.prod.yml`: `web` (Caddy serving the Vite build and proxying `/api`), `api`, and `db`, plus a one-off `seed` service. Only `web` publishes ports;
+  - the API image bakes in the embedding model and runs with `HF_HUB_OFFLINE=1`, so startup and seeding never download anything; onnxruntime telemetry is off;
+  - `api` and `web` run non-root, read-only, with all capabilities dropped (Caddy keeps `NET_BIND_SERVICE`, which its binary carries as a file capability);
+  - the API container gets an empty `POSTGRES_PASSWORD`: it has no use for the owner login, and only `seed` gets it;
+  - images are built on the server from a git checkout; CI builds and smoke-tests the same stack keyless on every push (x86 only);
+  - `infra/make-env.sh` generates the server's secrets there, so they never pass through chat, git, or CI. `LIVE_MODE_ENABLED` starts `false`.
+- **Why:** one origin keeps the httpOnly cookie simple (D033) and Caddy handles certificates with no extra service. Building on the server needs no registry or registry credentials. The read-only, owner-less API means a compromised API process can neither change its code nor touch the data schemas.
+- **Alternatives:** the API serving the static files (one fewer container, but Python serving assets and no automatic HTTPS); a registry such as GHCR with images built in CI (faster deploys, but an Arm build in CI or emulation, and a token on the server); separate HTTPS termination on the host (the flagship's approach; one more thing to install outside Docker).
+
+## D047: The public demo's settings (2026-11-02, Phase 8; Baron's choices)
+
+- **Decision:** a new, dedicated `t4g.small` (2 GB, Arm, Ubuntu 24.04) with an Elastic IP and a free DuckDNS subdomain; live mode with `gpt-6-luna` (D043), a $1.00 daily budget, the kill switch, and one-click demo sign-in (D036). Baron runs the server commands from DEPLOYMENT.md.
+- **Why:** a dedicated instance doesn't compete with the flagship for memory or ports 80/443. Infrastructure is about $21 a month (DEPLOYMENT.md), and the model spend is capped by the daily budget.
+- **Verification without spending:** the budget cap is checked with `DAILY_BUDGET_USD=0` (spend so far is already at the cap, so the next question is refused before any model call), and the kill switch with `LIVE_MODE_ENABLED=false`. Only the end-to-end live question costs money (about $0.0007).

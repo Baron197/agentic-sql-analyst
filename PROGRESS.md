@@ -14,7 +14,7 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 | 5 API | **done** (2026-10-30) | all DoD items pass; see session log |
 | 6 Web app | **done** (2026-10-30) | all DoD items pass; see session log |
 | 7 Real-mode evaluation | **done** (2026-11-02) | all DoD items pass; live model `gpt-6-luna` confirmed by Baron (D043) |
-| 8 Deploy | not started | |
+| 8 Deploy | **in progress** | stack built, CI-tested, and documented; waiting for Baron's AWS setup (DEPLOYMENT.md steps 1-5) |
 | 9 Portfolio packaging | not started | |
 
 ## Decided in the planning chat (2026-10-29)
@@ -27,7 +27,8 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 
 ## Open questions for Baron
 
-- Phase 8 (AWS EC2, Baron's choice on 2026-11-02): which instance (shared with the flagship or new, and its size; Postgres plus the embedding model need about 2 GB RAM), the domain or subdomain for HTTPS, and the daily budget cap for the public demo (suggested $1/day, the current default). An optional free keyless mirror (for example Render free plus Neon free with pgvector) comes after EC2 works; check current free-tier terms first.
+- The DuckDNS subdomain name (DEPLOYMENT.md uses `arunika-sql.duckdns.org` as the example). Baron picks it when he creates it.
+- Optional free keyless mirror (for example Render free plus Neon free with pgvector): only after EC2 works; check current free-tier terms first.
 
 ## Open issues
 
@@ -45,11 +46,22 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 
 ## Next step
 
-Phase 8: deploy to AWS EC2 (BUILD_GUIDE §13), only when Baron says so. Start with a plan; it needs his answers to the Phase 8 open questions above.
+Phase 8, the server part (plan approved by Baron on 2026-11-02, D047):
+1. Baron follows docs/DEPLOYMENT.md steps 1-5 on AWS (new `t4g.small`, Elastic IP, DuckDNS, swap, Docker, clone, `make-env.sh`, OpenAI key into `.env` by hand, build, seed, up). Claude can't do the console or SSH steps.
+2. DoD proofs on the public URL (paid part approved, under $0.01): step 6 with `--expect-status 503` (kill switch), then live mode on and `--ask` (one live question end to end), then step 7 with `DAILY_BUDGET_USD=0` and `--expect-status 429` (budget cap), then the budget back to 1.00. Record the outputs in the session log.
+3. Add the live URL to README.md, update this file, commit. Then Phase 9 only when Baron says so.
 
 ## Session log
 
 _(newest first: date, what was done, decisions, issues)_
+
+### 2026-11-02: Phase 8 part 1 (production stack, CI, runbook)
+
+- **Plan approved** by Baron with the recommended answers: a new dedicated `t4g.small`, a DuckDNS subdomain, Baron runs the server commands, live `gpt-6-luna` with a $1/day cap, paid checks under $0.01 (D047).
+- **Built:** `infra/api.Dockerfile` (non-root, model baked in, offline at runtime), `infra/web.Dockerfile` (Vite build in Caddy, non-root), `infra/Caddyfile` (one origin, HTTPS, CSP and other security headers, unbuffered SSE), `infra/docker-compose.prod.yml` (read-only containers, dropped capabilities, memory limits, log caps, one-off `seed`; the API gets no owner password), `infra/make-env.sh`, `infra/compose.sh`, `infra/smoke_public.py` + `poe smoke-public`, `.dockerignore` (allow-list), a CI `docker` job, docs/DEPLOYMENT.md (runbook, cost, operations, teardown), D046.
+- **Verified locally** on the production stack: smoke test with a keyless question; Chromium through Caddy with no CSP violations or page errors (fonts and chart load); non-root, read-only, capabilities, no published DB/API ports, no owner password in the API; kill switch (503) and budget cap at 0 (429) in OpenAI mode with a placeholder key, no model calls.
+- **CI:** the first Docker-job push failed at workflow parse (`runner` context in a job's `env`); fixed in `5013b6a`. Run 41391863616 is green on all three jobs (docker job 1 min 41 s).
+- **Monthly cost** (checked 2026-11-02, Singapore): about $21 infrastructure (`t4g.small` $15.48, 20 GB gp3 $1.92, public IPv4 $3.65), plus OpenAI capped at $1/day.
 
 ### 2026-11-02: published on GitHub
 
