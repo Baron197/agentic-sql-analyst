@@ -143,7 +143,7 @@ All commands run in the repo folder on the server. `.env` changes take effect wh
 
 **Backups.** None are needed for the data: `seed` rebuilds it deterministically. Stored runs (`app.runs`) are demo history and are lost only if the `pgdata` volume is deleted.
 
-**Shared demo account.** Every visitor who clicks "Try as analyst" uses the same `analyst@demo` user, so its limit of 10 questions a minute and the daily budget are shared by all visitors. That is the intended ceiling for a public demo. Their histories are not shared: each demo sign-in sees only the runs of its own browser session (D048).
+**Shared demo account.** Every visitor who clicks "Try as analyst" uses the same `analyst@demo` user, so its limit of 5 questions a minute and the daily budget are shared by all visitors. That is the intended ceiling for a public demo. Their histories are not shared: each demo sign-in sees only the runs of its own browser session (D048).
 
 ## Publishing recorded live runs
 

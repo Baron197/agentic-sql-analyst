@@ -41,7 +41,7 @@ OPENAI_API_KEY=
 
 COOKIE_SECURE=$COOKIE_SECURE
 DEMO_LOGIN_ENABLED=true
-RATE_LIMIT_PER_MINUTE=10
+RATE_LIMIT_PER_MINUTE=5
 DAILY_BUDGET_USD=0.50
 # Kill switch: stays false until the OpenAI key is in and the stack checks out.
 LIVE_MODE_ENABLED=false

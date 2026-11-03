@@ -60,7 +60,7 @@ _(newest first: date, what was done, decisions, issues)_
 
 - Baron launched the instance (`ap-southeast-2`, Sydney), attached the Elastic IP 15.134.27.139, pointed `arunika-sql.duckdns.org` at it, and brought the stack up. HTTPS works.
 - Step 6, live mode off: `infra/smoke_public.py --url https://arunika-sql.duckdns.org --expect-status 503` passed all 8 checks (health, app page, security headers, HTTP→HTTPS 308, demo sign-in, cookie HttpOnly+Secure, signed in, ask refused 503 `live_mode_disabled`).
-- Daily budget lowered to $0.50 (D047 amended): `make-env.sh` default and DEPLOYMENT updated; Baron sets it in the server's `.env`.
+- Daily budget lowered to $0.50 and the question limit to 5 a minute (D047 amended): `make-env.sh` defaults, DEPLOYMENT, and SECURITY updated; Baron set both in the server's `.env`.
 - Open: DEPLOYMENT's cost table uses Singapore prices; the server is in Sydney. Check the Sydney prices before quoting a monthly cost.
 
 ### 2026-11-02: cost check against OpenAI's dashboard; cache-write price fixed (D053)

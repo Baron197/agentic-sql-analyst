@@ -382,7 +382,7 @@ Short entries, newest last: context, decision, why, alternatives considered.
 
 - **Decision:** a new, dedicated `t4g.small` (2 GB, Arm, Ubuntu 24.04) with an Elastic IP and a free DuckDNS subdomain; live mode with `gpt-6-luna` (D043), a $1.00 daily budget, the kill switch, and one-click demo sign-in (D036). Baron runs the server commands from DEPLOYMENT.md.
 - **Why:** a dedicated instance doesn't compete with the flagship for memory or ports 80/443. Infrastructure is about $21 a month (DEPLOYMENT.md), and the model spend is capped by the daily budget.
-- **Amended 2026-11-03:** the daily budget is $0.50, halving the worst case to about $15.50 a month before the link goes public. That still allows about 675 new questions a day.
+- **Amended 2026-11-03:** the daily budget is $0.50, halving the worst case to about $15.50 a month before the link goes public; that still allows about 675 new questions a day. The shared per-user limit is 5 questions a minute (`RATE_LIMIT_PER_MINUTE`, 10 locally), so one visitor cannot use up the day's budget in minutes.
 - **Verification without spending:** the budget cap is checked with `DAILY_BUDGET_USD=0` (spend so far is already at the cap, so the next question is refused before any model call), and the kill switch with `LIVE_MODE_ENABLED=false`. Only the end-to-end live question costs money (about $0.0007).
 
 ## D048: Demo history is per browser session; recorded live runs are published from a file (2026-11-02, Phase 8)
