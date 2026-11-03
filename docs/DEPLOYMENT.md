@@ -34,9 +34,9 @@ Prices checked on 2026-11-02 for Asia Pacific (Singapore) `ap-southeast-1`, Linu
 | EBS gp3, 20 GB | $0.096 / GB-month | $1.92 |
 | Public IPv4 address (the Elastic IP, while attached) | $0.005 / hour | $3.65 |
 | **Infrastructure** | | **≈ $21** |
-| OpenAI `gpt-6-luna` | capped at `DAILY_BUDGET_USD` = $1.00 a day | **$0 to $31** |
+| OpenAI `gpt-6-luna` | capped at `DAILY_BUDGET_USD` = $0.50 a day | **$0 to $15.50** |
 
-- **The model cost is capped, and the expected cost is far lower.** On the Phase 7 test split the agent cost $0.000507 per question on average, and $0.000740 per new question with a cold cache ([EVAL_RESULTS.md](EVAL_RESULTS.md); OpenAI prices as of 2026-11-02, D053). The $1 daily cap allows about 1,350 new questions a day.
+- **The model cost is capped, and the expected cost is far lower.** On the Phase 7 test split the agent cost $0.000507 per question on average, and $0.000740 per new question with a cold cache ([EVAL_RESULTS.md](EVAL_RESULTS.md); OpenAI prices as of 2026-11-02, D053). The $0.50 daily cap allows about 675 new questions a day.
 - **Data transfer** for a demo page and JSON answers stays within the free monthly allowance.
 - **AWS Free plan.** On a new account's Free plan, the infrastructure is paid from the sign-up credits ($100, plus up to $100 more from AWS's onboarding activities), which last about 5 to 9 months at this rate. The Free plan itself ends after 6 months: the account is then suspended unless it is upgraded to a paid plan, and the demo goes offline.
 - Sources: [t4g.small prices by region](https://aws-pricing.com/t4g.small.html) (updated 2026-10-31), [ap-southeast-1 prices incl. EBS gp3](https://aws-pricing.com/ap-southeast-1.html), [AWS public IPv4 charge](https://aws.amazon.com/blogs/aws/new-aws-public-ipv4-address-charge-public-ip-insights). Check the [AWS Pricing Calculator](https://calculator.aws/) before relying on them.
@@ -88,7 +88,7 @@ infra/make-env.sh arunika-sql.duckdns.org
 nano .env    # paste the OpenAI key after OPENAI_API_KEY= ; save
 ```
 
-`make-env.sh` writes random passwords and keys, `COOKIE_SECURE=true`, one-click demo sign-in, `gpt-6-luna`, a $1.00 daily budget, and **`LIVE_MODE_ENABLED=false`**: nothing can spend money until you switch live mode on in step 6. It refuses to overwrite an existing `.env` and prints no secret. Visitors use the one-click demo sign-in, so nobody needs the demo passwords it generates.
+`make-env.sh` writes random passwords and keys, `COOKIE_SECURE=true`, one-click demo sign-in, `gpt-6-luna`, a $0.50 daily budget, and **`LIVE_MODE_ENABLED=false`**: nothing can spend money until you switch live mode on in step 6. It refuses to overwrite an existing `.env` and prints no secret. Visitors use the one-click demo sign-in, so nobody needs the demo passwords it generates.
 
 A spending limit on the OpenAI project (OpenAI dashboard → project → limits) is a second safety net under the app's daily budget.
 
@@ -125,7 +125,7 @@ infra/compose.sh up -d --force-recreate api
 python3 infra/smoke_public.py --url https://arunika-sql.duckdns.org --expect-status 429   # daily_budget_reached
 ```
 
-Then set it back to `1.00` and recreate `api` again. Both refusal paths (503 and 429) were also rehearsed on the production stack locally with a placeholder key on 2026-11-02, with no model calls.
+Then set it back to `0.50` and recreate `api` again. Both refusal paths (503 and 429) were also rehearsed on the production stack locally with a placeholder key on 2026-11-02, with no model calls.
 
 ## Operations
 

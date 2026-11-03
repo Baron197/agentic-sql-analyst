@@ -49,12 +49,19 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 Phase 8, recorded runs then the server part (plans approved by Baron on 2026-11-02, D047, D048):
 0. Baron asks live questions in the local production stack (http://127.0.0.1:8088; `.env.prodtest`, gitignored, has live mode on) and picks the runs to publish. Then dump, `poe recorded-add … --ids …`, review `data/recorded_runs.json` and `docs/RECORDED_RUNS.md`, link RECORDED_RUNS.md from the README, commit (DEPLOYMENT.md "Publishing recorded live runs").
 1. Baron follows docs/DEPLOYMENT.md steps 1-5 on AWS (new `t4g.small`, Elastic IP, DuckDNS, swap, Docker, clone, `make-env.sh`, OpenAI key into `.env` by hand, build, seed, up). Claude can't do the console or SSH steps.
-2. DoD proofs on the public URL (paid part approved, under $0.01): step 6 with `--expect-status 503` (kill switch), then live mode on and `--ask` (one live question end to end), then step 7 with `DAILY_BUDGET_USD=0` and `--expect-status 429` (budget cap), then the budget back to 1.00. Record the outputs in the session log.
+2. DoD proofs on the public URL (paid part approved, under $0.01): step 6 with `--expect-status 503` (kill switch), then live mode on and `--ask` (one live question end to end), then step 7 with `DAILY_BUDGET_USD=0` and `--expect-status 429` (budget cap), then the budget back to 0.50. Record the outputs in the session log.
 3. Add the live URL to README.md, update this file, commit. Then Phase 9 only when Baron says so.
 
 ## Session log
 
 _(newest first: date, what was done, decisions, issues)_
+
+### 2026-11-03: server up; kill switch checked on the public URL
+
+- Baron launched the instance (`ap-southeast-2`, Sydney), attached the Elastic IP 15.134.27.139, pointed `arunika-sql.duckdns.org` at it, and brought the stack up. HTTPS works.
+- Step 6, live mode off: `infra/smoke_public.py --url https://arunika-sql.duckdns.org --expect-status 503` passed all 8 checks (health, app page, security headers, HTTP→HTTPS 308, demo sign-in, cookie HttpOnly+Secure, signed in, ask refused 503 `live_mode_disabled`).
+- Daily budget lowered to $0.50 (D047 amended): `make-env.sh` default and DEPLOYMENT updated; Baron sets it in the server's `.env`.
+- Open: DEPLOYMENT's cost table uses Singapore prices; the server is in Sydney. Check the Sydney prices before quoting a monthly cost.
 
 ### 2026-11-02: cost check against OpenAI's dashboard; cache-write price fixed (D053)
 
