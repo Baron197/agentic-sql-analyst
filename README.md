@@ -38,7 +38,7 @@ Phase 8 (in progress) deploys it to one AWS EC2 instance. Done: the production s
 
 Test split, 60 questions × 3 repeats, `gpt-6-luna`, run on 2026-11-01. Full tables, caveats, and the result file behind every number are in [docs/EVAL_RESULTS.md](docs/EVAL_RESULTS.md). The web app's public Evaluation page shows the same results.
 
-| System | EX relabeled | Typed numbers per run | p50 | $ / question |
+| System | EX relabeled | Answers with typed numbers, per run | p50 | $ / question |
 |---|---|---|---|---|
 | Agent | 0.933 ± 0.023 | 0 | 7.3 s | 0.000507 |
 | Single-prompt baseline | 0.953 ± 0.031 | 48.3 ± 1.2 | 5.3 s | 0.000292 |

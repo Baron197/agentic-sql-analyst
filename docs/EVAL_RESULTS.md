@@ -15,12 +15,12 @@ Every number in the tables is generated from a committed result file by `eval/re
   - **EX strict:** the result matches the gold rows and columns exactly (values compared, column names ignored).
   - **EX lenient:** extra columns are allowed, as long as every gold column is there.
   - **EX relabeled:** lenient, and a label column may use different wording if it maps one-to-one to the gold labels (D039). Cases that pass only under this rule are checked by hand below.
-- **Typed numbers:** digits in the answer prose that code did not fill in from the result. The agent's answers are templates filled by code, so this must be 0. The baseline writes its prose freely, so its count shows how many numbers a reader would have to check by hand. A typed number is not necessarily wrong.
+- **Answers with typed numbers:** how many answers in a run contain at least one number the model typed itself (a number in the answer prose that is not in the question and that code did not fill in from the result). It counts answers, not numbers: an answer listing 19 store figures counts once. The agent's answers are templates filled by code, so this must be 0. The baseline writes its prose freely, so its count shows how many answers a reader would have to check against the table by hand. A typed number is not necessarily wrong.
 - **What ± means:** mean ± standard deviation over the 3 repeats. It measures how much the model varies from run to run on the same questions, not how much the scores would move on a different set of questions. One question is 1.7 points of EX on 60 questions, so **differences under about 5 points are not meaningful here**.
 
 ## Quality
 
-| System | Model | Questions x repeats | EX strict | EX lenient | EX relabeled | Valid SQL | Repairs | False refusals | Assumption stated | Refusal acc. | Unsafe refused | Safety block | Typed numbers | File |
+| System | Model | Questions x repeats | EX strict | EX lenient | EX relabeled | Valid SQL | Repairs | False refusals | Assumption stated | Refusal acc. | Unsafe refused | Safety block | Answers with typed numbers | File |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | agent | gpt-6-luna | 60 x 3 | 0.687 ± 0.031 | 0.913 ± 0.023 | 0.933 ± 0.023 | 0.987 ± 0.011 | 0.013 ± 0.011 | 0.013 ± 0.011 | 0.933 ± 0.116 | 1.000 ± 0.000 | 1.000 ± 0.000 | 1.000 ± 0.000 | 0 ± 0 | [2026-11-01_agent_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_agent_live_test_gpt-6-luna_n60_r3.json) |
 | baseline | gpt-6-luna | 60 x 3 | 0.700 ± 0.020 | 0.893 ± 0.031 | 0.953 ± 0.031 | 0.987 ± 0.011 | n/a | 0.013 ± 0.011 | 1.000 ± 0.000 | 1.000 ± 0.000 | 1.000 ± 0.000 | 1.000 ± 0.000 | 48.3 ± 1.2 | [2026-11-01_baseline_live_test_gpt-6-luna_n60_r3](../eval/results/2026-11-01_baseline_live_test_gpt-6-luna_n60_r3.json) |
@@ -49,7 +49,7 @@ Every number in the tables is generated from a committed result file by `eval/re
 - **EX relabeled:** agent 0.933 ± 0.023, baseline 0.953 ± 0.031. **EX lenient:** agent 0.913 ± 0.023, baseline 0.893 ± 0.031. The two systems are within noise of each other in both directions.
 - **Why:** the fictional company's schema is small enough for the baseline to put the whole data dictionary in one prompt. Retrieval matters more when the schema doesn't fit.
 - **Where the agent wins:**
-  - **Typed numbers:** 0 for the agent in every run. The baseline averaged 48.3 ± 1.2 per run of 60 questions. Every agent figure is filled in by code from the result rows, which is the project's main guarantee.
+  - **Answers with typed numbers:** 0 for the agent in every run. For the baseline, 48.3 ± 1.2 answers per run of 60 questions contained a number the model typed itself: nearly all of the 49 or 50 answers it wrote in each run (`answers_written` in the result file; the other questions were refused). Every agent figure is filled in by code from the result rows, which is the project's main guarantee.
   - **Bounded runs:** every agent run has a budget guard, a repair loop, and refusals with reasons and follow-up suggestions.
 - **Both systems** blocked every unsafe request (safety block rate 1.000, unsafe refused 1.000 in every run). Both had a false-refusal rate of 0.013 ± 0.011.
 

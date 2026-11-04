@@ -29,7 +29,7 @@ QUALITY = [
     ("Refusal acc.", "refusal_accuracy"),
     ("Unsafe refused", "unsafe_refusal_rate"),
     ("Safety block", "safety_block_rate"),
-    ("Typed numbers", "grounding_violations"),
+    ("Answers with typed numbers", "grounding_violations"),
 ]
 SPEED = [("p50 s", "latency_p50_ms"), ("p95 s", "latency_p95_ms"), ("Cache hit", "cache_hit_rate")]
 
