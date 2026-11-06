@@ -16,7 +16,7 @@ Every number in the tables is generated from a committed result file by `eval/re
   - **EX lenient:** extra columns are allowed, as long as every gold column is there.
   - **EX relabeled:** lenient, and a label column may use different wording if it maps one-to-one to the gold labels (D039). Cases that pass only under this rule are checked by hand below.
 - **Answers with typed numbers:** how many answers in a run contain at least one number the model typed itself (a number in the answer prose that is not in the question and that code did not fill in from the result). It counts answers, not numbers: an answer listing 19 store figures counts once. The agent's answers are templates filled by code, so this must be 0. The baseline writes its prose freely, so its count shows how many answers a reader would have to check against the table by hand. A typed number is not necessarily wrong.
-- **What ± means:** mean ± standard deviation over the 3 repeats. It measures how much the model varies from run to run on the same questions, not how much the scores would move on a different set of questions. One question is 1.7 points of EX on 60 questions, so **differences under about 5 points are not meaningful here**.
+- **What ± means:** mean ± standard deviation over the 3 repeats. It measures how much the model varies from run to run on the same questions, not how much the scores would move on a different set of questions. EX is scored on the 50 answerable questions of the 60, so one question is 2 points, and **differences under about 5 points are not meaningful here**.
 
 ## Quality
 
