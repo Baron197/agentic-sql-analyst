@@ -2,7 +2,7 @@
 
 How the public demo runs on one AWS EC2 instance with Docker Compose, and how to set it up, operate it, and take it down. PT Arunika Niaga and all its data are fictional and synthetic; this is a portfolio project built to production standards.
 
-The demo is at **https://arunika-sql.duckdns.org**: one `t4g.small` in Sydney, live mode on with `gpt-6-luna`, capped at $0.50 a day and 5 questions a minute per account. Checked on 2026-11-11 with `infra/smoke_public.py --ask`: one live question answered end to end (4 rows, 2 model calls, $0.0013, 15.3 s).
+The demo is at **[arunika-sql.duckdns.org](https://arunika-sql.duckdns.org)**: one `t4g.small` in Sydney, live mode on with `gpt-6-luna`, capped at $0.50 a day and 5 questions a minute per account. Checked on 2026-11-11 with `infra/smoke_public.py --ask`: one live question answered end to end (4 rows, 2 model calls, $0.0013, 15.3 s).
 
 ## What runs
 
@@ -128,6 +128,14 @@ python3 infra/smoke_public.py --url https://arunika-sql.duckdns.org --expect-sta
 ```
 
 Then set it back to `0.50` and recreate `api` again. Both refusal paths (503 and 429) were also rehearsed on the production stack locally with a placeholder key on 2026-11-02, with no model calls.
+
+## Spending alerts
+
+The app's daily cap only counts what the app records. These two console settings are a backstop outside the app, in case of a bug, a leaked key, or a forgotten instance. Both are set by hand in the consoles.
+
+**AWS: a monthly budget with email alerts.** Billing and Cost Management → **Budgets** → **Create budget** → **Use a template** → **Monthly cost budget**. Set the amount (for example $25, a little above the ≈ $21 expected) and the email addresses to notify. The template emails at set points of actual and forecast spend; check them on the review page. A budget only notifies; it does not stop the instance.
+
+**OpenAI: a hard monthly limit on the project.** In the [OpenAI platform](https://platform.openai.com/settings/), open the project that holds the server's key → **Limits** → **Spend** → **Edit spend limit**. Enter a monthly limit (for example $20, above the app's own $15.50 maximum) and turn on **Enforce a hard limit**: requests past it fail with 429 `project_spend_limit_exceeded`, so live questions fail until the next month or until the limit is raised. Enforcement is not instantaneous, so recorded spend can pass the limit slightly ([OpenAI spend limits](https://developers.openai.com/api/docs/guides/spend-limits)). Add spend alerts on the same page to get an email before the limit is reached.
 
 ## Operations
 

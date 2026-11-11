@@ -73,6 +73,18 @@ db-down = "docker compose down"
 db-ping = "python -m sql_analyst.db.ping"
 db-checksum = "python -m sql_analyst.db.checksum"
 
+[tool.poe.tasks.env-init]
+help = "Write a local .env from .env.example with random secrets (keyless, demo sign-in on); keeps an existing .env"
+cmd = "python -m sql_analyst.env_init"
+
+[tool.poe.tasks.setup]
+help = "First-time local setup: env-init, db-reset, web-install (~5 min the first time)"
+sequence = ["env-init", "db-reset", "web-install"]
+
+[tool.poe.tasks.demo]
+help = "Run the API and the web app together: http://127.0.0.1:5173 (Ctrl+C stops both)"
+cmd = "python -m sql_analyst.demo"
+
 [tool.poe.tasks.db-load]
 help = "Rebuild the core + analytics schemas and load the deterministic seed (any database)"
 cmd = "python -m sql_analyst.db.load"
