@@ -149,6 +149,6 @@ The limit leaves about 8× headroom over the heaviest legitimate query measured.
 
 - **The validator depends on sqlglot.** A query sqlglot parses differently from Postgres could slip past rules 2-6, but the executor runs sqlglot's regenerated SQL, and layers 5-6 do not depend on the validator at all.
 - **The allow-list may reject a legitimate function.** That shows up as a refusal, never as a leak. Functions are added when the eval shows a real need.
-- **The admin role can read the signing key.** The admin role (`POSTGRES_USER`) owns everything and is used only by `db-load` and tests, never by the agent or the API. In a deployment the key and the admin password live in the platform's secret store (Phase 8).
+- **The admin role can read the signing key.** The admin role (`POSTGRES_USER`) owns everything and is used only by `db-load` and tests, never by the agent or the API. On the demo server both live only in an owner-only `.env` file (no cloud secret store), and the API container never receives the admin password (see [DEPLOYMENT.md](DEPLOYMENT.md)).
 - **`now()` and `current_date`** are allowed and return the real date, while the data ends on 30 Sep 2026. Handling "this month" is the agent's job (Phase 4).
 - **Statement timeout vs. long-planned queries:** EXPLAIN plans but does not run; a query whose cost the planner underestimates (recursive CTEs) is caught only by the 5 s timeout.

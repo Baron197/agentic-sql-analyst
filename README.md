@@ -1,6 +1,6 @@
 # Agentic SQL Analyst
 
-> **Work in progress.** A portfolio project built to production standards, on a fictional company's synthetic data. Phases 0–7 are done; deployment (Phase 8) is in progress.
+> **Live demo: https://arunika-sql.duckdns.org** (one-click demo sign-in, no account needed). A portfolio project built to production standards, on a fictional company's synthetic data. Phases 0–8 are done; portfolio packaging (Phase 9) is next.
 
 Ask a company database questions in plain English or Bahasa Indonesia, and get answers you can check: the SQL, the rows behind it, and numbers filled in by code, never typed by the model.
 
@@ -30,9 +30,9 @@ All four are built and tested without an API key (see [docs/SECURITY.md](docs/SE
 
 ## Status
 
-Phases 0–7 of 10 are done: scaffold, synthetic database, safety layer (103 adversarial validator cases plus database-level attack tests, all blocked), the evaluation harness with a 100-question golden set (40 dev / 60 test) and a single-prompt baseline, the LangGraph agent (input guard, hybrid retrieval, SQL repair loop, result checks, template answers, budget guard), the FastAPI API (cookie sign-in, ask and streaming endpoints, run history, rate limit, daily spend cap, kill switch), and the React web app. Phase 7 measured the agent live on the test split (below).
+Phases 0–8 of 10 are done: scaffold, synthetic database, safety layer (103 adversarial validator cases plus database-level attack tests, all blocked), the evaluation harness with a 100-question golden set (40 dev / 60 test) and a single-prompt baseline, the LangGraph agent (input guard, hybrid retrieval, SQL repair loop, result checks, template answers, budget guard), the FastAPI API (cookie sign-in, ask and streaming endpoints, run history, rate limit, daily spend cap, kill switch), and the React web app. Phase 7 measured the agent live on the test split (below).
 
-Phase 8 (in progress) deploys it to one AWS EC2 instance. Done: the production stack (Caddy with HTTPS, hardened containers, a CI job that builds and smoke-tests the whole stack), private per-session demo history, and the public Recorded runs and Evaluation pages. Next: the deployment itself ([docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)). See [PROGRESS.md](PROGRESS.md) and, for the data, [docs/DATA.md](docs/DATA.md).
+Phase 8 deployed it to one AWS EC2 instance at https://arunika-sql.duckdns.org: the production stack (Caddy with HTTPS, hardened containers, a CI job that builds and smoke-tests the whole stack), private per-session demo history, and the public Recorded runs and Evaluation pages. Live mode runs `gpt-6-luna`, capped at $0.50 a day. On the public URL, a smoke test answered a live question end to end, and the kill switch (503) and the daily budget cap (429) both refused questions as designed. Setup, operations, and the monthly cost (about $21 for the server plus at most $15.50 for the model) are in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). Next: Phase 9, portfolio packaging. See [PROGRESS.md](PROGRESS.md) and, for the data, [docs/DATA.md](docs/DATA.md).
 
 ## Evaluation
 

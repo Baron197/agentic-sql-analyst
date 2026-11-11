@@ -2,6 +2,8 @@
 
 How the public demo runs on one AWS EC2 instance with Docker Compose, and how to set it up, operate it, and take it down. PT Arunika Niaga and all its data are fictional and synthetic; this is a portfolio project built to production standards.
 
+The demo is at **https://arunika-sql.duckdns.org**: one `t4g.small` in Sydney, live mode on with `gpt-6-luna`, capped at $0.50 a day and 5 questions a minute per account. Checked on 2026-11-11 with `infra/smoke_public.py --ask`: one live question answered end to end (4 rows, 2 model calls, $0.0013, 15.3 s).
+
 ## What runs
 
 ```
@@ -26,7 +28,7 @@ The same stack runs in CI on every push, keyless (the `docker` job): build, seed
 
 ## Monthly cost
 
-Prices checked on 2026-11-02 for Asia Pacific (Singapore) `ap-southeast-1`, Linux, on demand, 730 hours a month. Jakarta (`ap-southeast-3`) lists the same instance price.
+The demo runs in Asia Pacific (Sydney) `ap-southeast-2`. Prices checked on 2026-11-11 for that region, Linux, on demand, 730 hours a month. Singapore (`ap-southeast-1`) lists the same instance and gp3 prices.
 
 | Item | Price | Per month |
 |---|---|---|
@@ -39,7 +41,7 @@ Prices checked on 2026-11-02 for Asia Pacific (Singapore) `ap-southeast-1`, Linu
 - **The model cost is capped, and the expected cost is far lower.** On the Phase 7 test split the agent cost $0.000507 per question on average, and $0.000740 per new question with a cold cache ([EVAL_RESULTS.md](EVAL_RESULTS.md); OpenAI prices as of 2026-11-02, D053). The $0.50 daily cap allows about 675 new questions a day.
 - **Data transfer** for a demo page and JSON answers stays within the free monthly allowance.
 - **AWS Free plan.** On a new account's Free plan, the infrastructure is paid from the sign-up credits ($100, plus up to $100 more from AWS's onboarding activities), which last about 5 to 9 months at this rate. The Free plan itself ends after 6 months: the account is then suspended unless it is upgraded to a paid plan, and the demo goes offline.
-- Sources: [t4g.small prices by region](https://aws-pricing.com/t4g.small.html) (updated 2026-10-31), [ap-southeast-1 prices incl. EBS gp3](https://aws-pricing.com/ap-southeast-1.html), [AWS public IPv4 charge](https://aws.amazon.com/blogs/aws/new-aws-public-ipv4-address-charge-public-ip-insights). Check the [AWS Pricing Calculator](https://calculator.aws/) before relying on them.
+- Sources: AWS's own price data behind its [EC2 on-demand pricing page](https://aws.amazon.com/ec2/pricing/on-demand/) and [EBS pricing page](https://aws.amazon.com/ebs/pricing/) (both published 2026-11-10), and the [VPC pricing page](https://aws.amazon.com/vpc/pricing/) for public IPv4 (the same in every commercial region). Check the [AWS Pricing Calculator](https://calculator.aws/) before relying on them.
 
 ## One-time setup
 
@@ -48,7 +50,7 @@ You need an AWS account, an SSH client, and a free [DuckDNS](https://www.duckdns
 ### 1. Launch the instance (AWS console)
 
 EC2 → Instances → **Launch instances**:
-- **Region:** Asia Pacific (Singapore) or (Jakarta).
+- **Region:** any. The demo uses Asia Pacific (Sydney); Singapore and Jakarta list the same instance price.
 - **AMI:** Ubuntu Server 24.04 LTS, architecture **64-bit (Arm)**.
 - **Instance type:** `t4g.small`. (`t3.small` with the x86 AMI also works; the images build on either.)
 - **Key pair:** create one (`.pem`) and keep it in `~/.ssh/`.
@@ -113,7 +115,7 @@ With live mode off, every step passes and the question is refused with 503 `live
 
 ```bash
 infra/compose.sh up -d --force-recreate api
-python3 infra/smoke_public.py --url https://arunika-sql.duckdns.org --ask   # one paid question, about $0.0007
+python3 infra/smoke_public.py --url https://arunika-sql.duckdns.org --ask   # one paid question, about $0.001
 ```
 
 ### 7. Check the daily budget cap

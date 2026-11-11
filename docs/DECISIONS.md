@@ -438,3 +438,10 @@ Short entries, newest last: context, decision, why, alternatives considered.
 - **Why:** costs are derived numbers. Token counts are the raw record, and they match the bill, so re-pricing them is exact and keeps every published cost consistent with the bill. Rewriting the result files would lose what was recorded at the time.
 - **Not changed:** runs already in a database keep their stored cost (8 local runs, $0.0058 at the new prices against $0.0051 stored); new runs are priced correctly. The daily budget counts stored costs, so today's local spend reads about $0.0007 low.
 - **Alternatives:** fix the price for future runs only and add a note (published costs would stay about 6% low for the agent); edit the cost fields in the result files (rewrites the record).
+
+## D054: The demo runs in Sydney (2026-11-11, Phase 8)
+
+- **Context:** DEPLOYMENT.md suggested Singapore or Jakarta, closest to the Indonesian audience the fictional company implies. Baron launched the instance in Asia Pacific (Sydney) `ap-southeast-2`.
+- **Decision:** keep Sydney. The cost table now quotes Sydney prices, from AWS's own price data published 2026-11-10: `t4g.small` $0.0212/hour, gp3 $0.096/GB-month, public IPv4 $0.005/hour. These equal the Singapore figures, so the monthly total (≈ $21 for the server) is unchanged.
+- **Why:** the same price, and an answer already takes seconds of model calls (15.3 s for the end-to-end check, with two calls), so the extra network distance from Indonesia matters little. Not measured.
+- **Alternatives:** move to Singapore or Jakarta (a new instance, Elastic IP and DNS change for no measurable gain).

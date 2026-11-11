@@ -14,7 +14,7 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 | 5 API | **done** (2026-10-30) | all DoD items pass; see session log |
 | 6 Web app | **done** (2026-10-30) | all DoD items pass; see session log |
 | 7 Real-mode evaluation | **done** (2026-11-02) | all DoD items pass; live model `gpt-6-luna` confirmed by Baron (D043) |
-| 8 Deploy | **in progress** | stack built, CI-tested, and documented; per-session demo history and recorded runs added (D048); waiting for Baron's recorded runs and AWS setup |
+| 8 Deploy | **done** (2026-11-11) | all DoD items pass on https://arunika-sql.duckdns.org (EC2 Sydney, D054); see session log |
 | 9 Portfolio packaging | not started | |
 
 ## Decided in the planning chat (2026-10-29)
@@ -27,7 +27,6 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 
 ## Open questions for Baron
 
-- The DuckDNS subdomain name (DEPLOYMENT.md uses `arunika-sql.duckdns.org` as the example). Baron picks it when he creates it.
 - Optional free keyless mirror (for example Render free plus Neon free with pgvector): only after EC2 works; check current free-tier terms first.
 
 ## Open issues
@@ -46,15 +45,23 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 
 ## Next step
 
-Phase 8, recorded runs then the server part (plans approved by Baron on 2026-11-02, D047, D048):
-0. Baron asks live questions in the local production stack (http://127.0.0.1:8088; `.env.prodtest`, gitignored, has live mode on) and picks the runs to publish. Then dump, `poe recorded-add … --ids …`, review `data/recorded_runs.json` and `docs/RECORDED_RUNS.md`, link RECORDED_RUNS.md from the README, commit (DEPLOYMENT.md "Publishing recorded live runs").
-1. Baron follows docs/DEPLOYMENT.md steps 1-5 on AWS (new `t4g.small`, Elastic IP, DuckDNS, swap, Docker, clone, `make-env.sh`, OpenAI key into `.env` by hand, build, seed, up). Claude can't do the console or SSH steps.
-2. DoD proofs on the public URL (paid part approved, under $0.01): step 6 with `--expect-status 503` (kill switch), then live mode on and `--ask` (one live question end to end), then step 7 with `DAILY_BUDGET_USD=0` and `--expect-status 429` (budget cap), then the budget back to 0.50. Record the outputs in the session log.
-3. Add the live URL to README.md, update this file, commit. Then Phase 9 only when Baron says so.
+Phase 9, portfolio packaging (BUILD_GUIDE §13), only when Baron says so. Start with a short plan for his OK: README polish, `docs/ARCHITECTURE.md`, the demo video script, the LinkedIn post, and a clean-clone check (keyless demo in 10 minutes or less).
+
+Server housekeeping, Baron's to do when he wants: AWS Free plan credits and the 6-month plan end (DEPLOYMENT "Monthly cost"); the OpenAI spend shows in `/api/metrics` after sign-in.
 
 ## Session log
 
 _(newest first: date, what was done, decisions, issues)_
+
+### 2026-11-11: Phase 8 done
+
+- **DoD, all on https://arunika-sql.duckdns.org:**
+  - public HTTPS URL, demo sign-in works: free smoke test passed (health live, app page, security headers, HTTP→HTTPS 308, demo sign-in, cookie HttpOnly+Secure, signed in as analyst);
+  - one live question end to end (`smoke_public.py --ask`, approved by Baron): steps, SQL, and rows streamed, answered, rows=4, keyless=False, 2 model calls, $0.00131, 15.3 s. The runbook's "about $0.0007" was the eval average; it now says about $0.001;
+  - budget cap: `--expect-status 429` with a low daily cap passed on 2026-11-03 (HTTP 429 `daily_budget_reached`); the cap is back at $0.50 (the live question above was answered);
+  - kill switch: `--expect-status 503` passed on 2026-11-03;
+  - monthly cost documented with Sydney prices (D054): ≈ $21 for the server plus at most $15.50 for the model.
+- **Docs:** README banner and status (live URL, Phases 0–8 done), DEPLOYMENT (the live demo, Sydney prices from AWS's price data published 2026-11-10, region advice), SECURITY (secrets are in an owner-only `.env` on the server, not a cloud secret store).
 
 ### 2026-11-03: server up; kill switch checked on the public URL
 
