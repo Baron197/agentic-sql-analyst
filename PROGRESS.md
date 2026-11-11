@@ -15,7 +15,7 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 | 6 Web app | **done** (2026-10-30) | all DoD items pass; see session log |
 | 7 Real-mode evaluation | **done** (2026-11-02) | all DoD items pass; live model `gpt-6-luna` confirmed by Baron (D043) |
 | 8 Deploy | **done** (2026-11-11) | all DoD items pass on https://arunika-sql.duckdns.org (EC2 Sydney, D054); see session log |
-| 9 Portfolio packaging | not started | |
+| 9 Portfolio packaging | **done** (2026-11-11) | both DoD items pass; video recording and the website/CV/LinkedIn updates are Baron's |
 
 ## Decided in the planning chat (2026-10-29)
 
@@ -41,17 +41,35 @@ Updated by Claude at the end of every session. A fresh chat continues from here.
 - The no-data refusal rule (D040) over-fired once on test (t010, a partly covered year) and the agent once grouped by `region_id` for a city question (t018). Add dev cases for both before any fix (D044).
 - The answer step writes its prompt to the cache and never reads it back (it contains the result rows): $0.0318 of the agent's $0.0912 on test (re-priced, D053). A cache-friendlier answer prompt is a possible saving, not measured.
 - The embedding model downloads from Hugging Face on the first `index-build` (unauthenticated; ~220 MB). On Windows, huggingface_hub warns that symlinks are unsupported; the poe tasks silence the warning and caching still works.
-- **Recurring (2026-10-29 and 2026-10-30):** Docker Desktop 4.80 on this machine crashed at startup because of leftover AF_UNIX socket files that Windows refuses to delete (error 1920). Workaround used on 2026-10-29: quit Docker Desktop and rename the folders aside: `%LOCALAPPDATA%\Docker\run` and `%LOCALAPPDATA%\docker-secrets-engine` (now `*.stale-20261029*`). They can be deleted after a reboot. If Docker fails to start again with "The file cannot be accessed by the system", repeat that. Quitting Docker Desktop normally (not killing it) should avoid it, but it happened again on 2026-10-30 after a normal session end (folders renamed to `*.stale-20261030`). The crash is in Docker's "Inference manager" (Docker Model Runner); turning that feature off in Docker Desktop settings may stop it. That is Baron's call, since it changes his Docker configuration.
+- **Recurring (2026-10-29, 2026-10-30, 2026-11-11):** Docker Desktop 4.80 on this machine crashed at startup because of leftover AF_UNIX socket files that Windows refuses to delete (error 1920). Workaround used on 2026-10-29: quit Docker Desktop and rename the folders aside: `%LOCALAPPDATA%\Docker\run` and `%LOCALAPPDATA%\docker-secrets-engine` (now `*.stale-20261029*`). They can be deleted after a reboot. If Docker fails to start again with "The file cannot be accessed by the system", repeat that. Quitting Docker Desktop normally (not killing it) should avoid it, but it happened again on 2026-10-30 after a normal session end (folders renamed to `*.stale-20261030`), and on 2026-11-11 (`*.stale-20261111`). The crash is in Docker's "Inference manager" (Docker Model Runner); turning that feature off in Docker Desktop settings may stop it. That is Baron's call, since it changes his Docker configuration.
 
 ## Next step
 
-Phase 9, portfolio packaging (BUILD_GUIDE §13), only when Baron says so. Start with a short plan for his OK: README polish, `docs/ARCHITECTURE.md`, the demo video script, the LinkedIn post, and a clean-clone check (keyless demo in 10 minutes or less).
+All 10 phases (0–9) are done. Baron's steps, none needed for the code:
+1. Push the Phase 9 commits (needs his OK), so the README's clone command gets `poe setup` and `poe demo`.
+2. Set the two spending alerts (DEPLOYMENT "Spending alerts": an AWS budget, an OpenAI hard monthly limit on the server's project).
+3. Record the demo video from `docs/DEMO_VIDEO_SCRIPT.md` (live questions, about $0.001 each), then link it from the README.
+4. Post on LinkedIn from `portfolio/LINKEDIN_POST.md` (local, not in git), and update the website and CV in the separate Website chat (BUILD_GUIDE §13).
+
+After that, only with Baron's go-ahead: the stretch goals (BUILD_GUIDE §14) and the MLOps items in the README roadmap. Suggested order: store the prompt version and git commit with every app run; uptime and error-rate alerts; a small live regression check before deploys (paid, needs a cost estimate and his OK); a tracing backend.
 
 Server housekeeping, Baron's to do when he wants: AWS Free plan credits and the 6-month plan end (DEPLOYMENT "Monthly cost"); the OpenAI spend shows in `/api/metrics` after sign-in.
 
 ## Session log
 
 _(newest first: date, what was done, decisions, issues)_
+
+### 2026-11-11: Phase 9 done (portfolio packaging)
+
+- **Local setup in 3 commands:** `git clone … && cd …`, `uv run poe setup` (new `env-init`, which writes a keyless `.env` with random secrets and the demo sign-in on, never overwrites, prints no secret; then `db-reset` and `web-install`), and `uv run poe demo` (new: the API and the Vite server together, both stopped on Ctrl+C, the process tree killed on Windows). Tests: `test_env_init.py`, `test_demo.py`.
+- **README rewritten** to BUILD_GUIDE §13: live demo link and how to sign in, the four guarantees, a Mermaid diagram and the 7 steps of a question, the eval summary (unchanged figures), keyless local run, design decisions and trade-offs, limitations, roadmap (stretch goals plus MLOps), a docs table, the stack.
+- **New docs:** `docs/ARCHITECTURE.md` (components, one request, the agent graph node by node, safety layers, retrieval, observability, eval harness, deployment, CI, code map), `docs/DEMO_VIDEO_SCRIPT.md` (about 3 minutes, scene by scene, against the live site). DEPLOYMENT has a "Spending alerts" section (AWS budget; OpenAI project hard limit, from OpenAI's spend-limits guide). The LinkedIn draft is in `portfolio/` (excluded in `.git/info/exclude`, like `study-guide/`).
+- **DoD, every link works:** `test_doc_links.py` checks every relative link and `#anchor` in 26 Markdown files (111 links; it caught a broken file and anchor in a self-check) and runs in CI. External links (18) fetched once on 2026-11-11: all load; three Indonesian news sites refuse scripted requests, so they were opened in the browser instead.
+- **DoD, clean clone ≤ 10 minutes:** cloned `main` (commit 5db55e3, from the local repo; not pushed yet) into a fresh folder with empty uv and npm caches. `poe setup` 4 min 47 s (exit 0; included the 220 MB embedding model download), `poe demo` up in about 8 s, then in the browser: "Try as analyst", the demo question answered keyless with "Numbers filled from the query result". **Clone to answer: 5 min 44 s.** Already on this machine, so not timed: Python 3.12 (uv-managed) and the `pgvector/pgvector:pg16` image. No processes were left on 8000/5173 after stopping; the clone's container and volume were removed.
+- **Found in the clean-clone test:** Compose names the volume after the folder, so a re-clone into a folder with the same name reuses the old volume and its password no longer matches the new `.env`. The test used the folder name `arunika-clean`; the README now says to run `poe db-wipe` if `setup` fails with that password error.
+- `infra/smoke_public.py` fails against the Vite dev server on the security-headers check (Caddy sets them, Vite doesn't). Expected, left as is: the script is for the production stack.
+- **Verified:** `poe check` with Postgres up, 796 passed. No `web/` changes, so `web-check` was not needed.
+- Docker Desktop hit the known startup crash again; same workaround (folders renamed `*.stale-20261111`).
 
 ### 2026-11-11: Phase 8 done
 

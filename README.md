@@ -82,7 +82,7 @@ uv run poe setup   # .env with random secrets, Postgres + synthetic data + retri
 uv run poe demo    # API + web app; open http://127.0.0.1:5173 and click "Try as analyst"
 ```
 
-The first `setup` takes a few minutes: it downloads Python and npm packages, the Postgres image, and a 220 MB embedding model. `Ctrl+C` stops the demo; `uv run poe db-down` stops Postgres.
+The first `setup` takes a few minutes: it downloads Python and npm packages, the Postgres image, and a 220 MB embedding model. `Ctrl+C` stops the demo; `uv run poe db-down` stops Postgres. If `setup` fails with `password authentication failed for user "postgres"`, a database volume from an earlier clone in a folder of the same name is in the way: `uv run poe db-wipe` deletes it, then run `setup` again.
 
 **Keyless** means a rule-based stand-in answers instead of a model: no API key, no cost. It answers the demo questions offered on the Ask page (also listed by `uv run poe ask`), runs them through the same validator, executor, and row-level security, and refuses anything else. It shows the plumbing, not model quality.
 
